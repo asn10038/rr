@@ -20,6 +20,8 @@
 #include "util.h"
 
 #include "MuplayEventMatcher.h"
+#include "ReplaySession.h"
+#include "MuplaySession.h"
 /* ------------------------ */
 
 using namespace std;
@@ -80,6 +82,9 @@ namespace rr {
       printf("You combined the traces to %lu events\n", muTrace.size());
       printf("Old trace was %lu events\n", muMatcher.oldFrames.size());
       printf("New trace was %lu events\n", muMatcher.newFrames.size());
+      /* Trigger this modified replay */
+      ReplaySession::shr_ptr replay_session = ReplaySession::create(new_trace_dir);
+      MuplaySession::shr_ptr muplay_session = MuplaySession::create(replay_session);
 
   }
 

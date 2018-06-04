@@ -346,7 +346,7 @@ private:
   bool did_fast_forward;
 
   // The clock_gettime(CLOCK_MONOTONIC) timestamp of the first trace event, used
-  // during 'replay' to calculate the elapsed time between the first event and 
+  // during 'replay' to calculate the elapsed time between the first event and
   // all other recorded events in the timeline during the 'record' phase.
   double trace_start_time;
 
