@@ -18,6 +18,8 @@
 #include "log.h"
 #include "main.h"
 #include "util.h"
+
+#include "MuplayEventMatcher.h"
 /* ------------------------ */
 
 using namespace std;
@@ -47,30 +49,38 @@ namespace rr {
   };
 
 
-  static void muplay(const string& old_tracedir, const string& new_tracedir,
+  static void muplay(const string& old_trace_dir, const string& new_trace_dir,
                      const MuplayFlags& flags, const vector<string>& args,
                      FILE* out) {
       if (flags.some_flag)
-        printf("some_flag is true");
+        fprintf(out, "some_flag is true");
       while (!args.empty())
-        printf("Args are not empty");
-      TraceReader oldTrace(old_tracedir);
-      TraceReader newTrace(new_tracedir);
-      fprintf(out,"Going to read the old trace dir log");
-      int oldCount, newCount = 0;
+        fprintf(out, "Args are not empty");
+
+      TraceReader oldTrace(old_trace_dir);
+      TraceReader newTrace(new_trace_dir);
+
+      // READ THE TRACES
+      vector<TraceFrame> oldFrames, newFrames;
       while (!oldTrace.at_end())
       {
         // printf("You are advancing the reader\n");
-        oldCount++;
         TraceFrame oldTraceFrame = oldTrace.read_frame();
-        oldTraceFrame.dump(out);
+        oldFrames.push_back(oldTraceFrame);
+        // oldTraceFrame.dump(out);
       }
       while(!newTrace.at_end())
       {
-        newCount++;
         TraceFrame newTraceFrame = newTrace.read_frame();
+        newFrames.push_back(newTraceFrame);
       }
-      printf("Old trace count: %i \t : \t New Trace count: %i\n", oldCount, newCount);
+
+      MuplayEventMatcher muMatcher(oldFrames, newFrames);
+      vector<TraceFrame> muTrace = muMatcher.combineTraces();
+      printf("You combined the traces to %lu events\n", muTrace.size());
+      printf("Old trace was %lu events\n", muMatcher.oldFrames.size());
+      printf("New trace was %lu events\n", muMatcher.newFrames.size());
+
   }
 
   int MuplayCommand::run(vector<string>& args) {
@@ -78,14 +88,14 @@ namespace rr {
     // TODO CODE TO PARSE OPTIONS
 
     string old_trace_dir, new_trace_dir;
-    if (!parse_optional_trace_dir(args, &new_trace_dir))
+    if (!parse_optional_trace_dir(args, &old_trace_dir))
     {
       printf("Problem parsing the old_trace_dir");
       return 1;
     }
-    if (!parse_optional_trace_dir(args, &old_trace_dir))
+    if (!parse_optional_trace_dir(args, &new_trace_dir))
     {
-      printf("Problem parsing the old_trace_dir");
+      printf("Problem parsing the new_trace_dir");
       return 1;
     }
 

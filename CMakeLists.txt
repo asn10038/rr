@@ -424,6 +424,7 @@ set(RR_SOURCES
   ${CMAKE_CURRENT_BINARY_DIR}/rr_trace.capnp.c++
   third-party/blake2/blake2b.c
   src/MuplayCommand.cc
+  src/MuplayEventMatcher.cc
 )
 
 set_source_files_properties(${RR_SOURCES}
