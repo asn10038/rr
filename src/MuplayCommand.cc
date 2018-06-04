@@ -36,7 +36,7 @@ namespace rr {
 
   MuplayCommand MuplayCommand::singleton(
     "muplay",
-    " rr muplay [trace_dir] [run_cmd] [old_code] [new_code]"
+    " rr muplay [old_tracedir] [new_tracedir]\n"
   );
 
   struct MuplayFlags {
@@ -46,28 +46,50 @@ namespace rr {
     : some_flag(false) {}
   };
 
-  static void muplay(const string& trace_dir, const MuplayFlags& flags,
-                     const vector<string>& args, FILE* out) {
+
+  static void muplay(const string& old_tracedir, const string& new_tracedir,
+                     const MuplayFlags& flags, const vector<string>& args,
+                     FILE* out) {
       if (flags.some_flag)
         printf("some_flag is true");
       while (!args.empty())
         printf("Args are not empty");
-      TraceReader trace(trace_dir);
-      fprintf(out,"You made it to the muplay command!");
+      TraceReader oldTrace(old_tracedir);
+      TraceReader newTrace(new_tracedir);
+      fprintf(out,"Going to read the old trace dir log");
+      int oldCount, newCount = 0;
+      while (!oldTrace.at_end())
+      {
+        // printf("You are advancing the reader\n");
+        oldCount++;
+        TraceFrame oldTraceFrame = oldTrace.read_frame();
+        oldTraceFrame.dump(out);
+      }
+      while(!newTrace.at_end())
+      {
+        newCount++;
+        TraceFrame newTraceFrame = newTrace.read_frame();
+      }
+      printf("Old trace count: %i \t : \t New Trace count: %i\n", oldCount, newCount);
   }
 
   int MuplayCommand::run(vector<string>& args) {
     MuplayFlags flags;
     // TODO CODE TO PARSE OPTIONS
 
-    string trace_dir;
-    if (!parse_optional_trace_dir(args, &trace_dir))
+    string old_trace_dir, new_trace_dir;
+    if (!parse_optional_trace_dir(args, &new_trace_dir))
     {
-      printf("Problem parsing the optional trace_dir");
+      printf("Problem parsing the old_trace_dir");
+      return 1;
+    }
+    if (!parse_optional_trace_dir(args, &old_trace_dir))
+    {
+      printf("Problem parsing the old_trace_dir");
       return 1;
     }
 
-    muplay(trace_dir, flags, args, stdout);
+    muplay(old_trace_dir, new_trace_dir, flags, args, stdout);
     return 0;
   }
 } // namespace rr
