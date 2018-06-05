@@ -425,6 +425,7 @@ set(RR_SOURCES
   third-party/blake2/blake2b.c
   src/MuplayCommand.cc
   src/MuplayEventMatcher.cc
+  src/MuplaySession
 )
 
 set_source_files_properties(${RR_SOURCES}
