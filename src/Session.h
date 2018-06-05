@@ -22,6 +22,7 @@ class DiversionSession;
 class EmuFs;
 class RecordSession;
 class ReplaySession;
+class MuplaySession;
 class ReplayTask;
 class Task;
 class ThreadGroup;
@@ -252,10 +253,16 @@ public:
   virtual RecordSession* as_record() { return nullptr; }
   virtual ReplaySession* as_replay() { return nullptr; }
   virtual DiversionSession* as_diversion() { return nullptr; }
+  /* ANT EDIT */
+  virtual MuplaySession* as_muplay() { return nullptr; }
+  /* -------- */
 
   bool is_recording() { return as_record() != nullptr; }
   bool is_replaying() { return as_replay() != nullptr; }
   bool is_diversion() { return as_diversion() != nullptr; }
+  /* ANT EDIT */
+  bool is_muplay() { return as_muplay() != nullptr; }
+  /* -------- */
 
   bool visible_execution() const { return visible_execution_; }
   void set_visible_execution(bool visible) { visible_execution_ = visible; }
