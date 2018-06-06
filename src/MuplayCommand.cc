@@ -17,7 +17,7 @@
 #include "ReplayCommand.h"
 #include "DiversionSession.h"
 #include "ReplayTask.h"
-// #include "MuplaySession.h"
+#include "MuplaySession.h"
 /* ------------------------ */
 
 using namespace std;
@@ -54,7 +54,8 @@ namespace rr {
     result.redirect_stdio = true;
     return result;
   }
-  static void serve_muplay_no_debugger(const string& trace_dir,
+  static void serve_muplay_no_debugger(const string& old_trace_dir,
+                                       const string& new_trace_dir,
                                        const MuplayFlags& flags,
                                        vector<TraceFrame>& muTrace)
   {
@@ -62,49 +63,61 @@ namespace rr {
     if (muTrace.size() > 0)
       {}
     //signals switch to turn in to live execution
-    bool LIVE = false;
+    // bool LIVE = false;
 
-    ReplaySession::shr_ptr replay_session = ReplaySession::create(trace_dir);
+    ReplaySession::shr_ptr replay_session = ReplaySession::create(new_trace_dir);
     replay_session->set_flags(get_session_flags());
 
     if (flags.dont_launch_debugger)
       printf("don't launch debugger\n");
 
-    uint32_t step_count = 0;
+    // uint32_t step_count = 0;
     struct timeval last_dump_time;
     Session::Statistics last_stats;
     gettimeofday(&last_dump_time, NULL);
-
-    printf("Doing personal replay\n");
-    int LIVE_FRAME = 158;
-    DiversionSession::shr_ptr diversion_session = replay_session->clone_diversion();
-    Task* task = diversion_session->find_task(replay_session->current_task()->tuid());
-    while (true) {
+    /* Beginning to moving things out of this class as appropriate */
+    MuplaySession::shr_ptr muplay_session = MuplaySession::create(old_trace_dir,
+                                                                     new_trace_dir);
+    printf("Doing muplay replay\n");
+    while(true) {
       RunCommand cmd = RUN_CONTINUE;
-
-      /* TODO Figure out how to refactor this if statement with inheritance */
-      if (!LIVE) {
-        FrameTime before_time = replay_session->trace_reader().time();
-        if (before_time == LIVE_FRAME)
-        {
-          LIVE = true;
-          diversion_session = replay_session->clone_diversion();
-          task = diversion_session->find_task(replay_session->current_task()->tuid());
-          continue;
-        }
-        auto result = replay_session->replay_step(cmd);
-        FrameTime after_time = replay_session->trace_reader().time();
-        DEBUG_ASSERT(after_time >= before_time && after_time <= before_time + 1);
-        ++step_count;
-        if (result.status == REPLAY_EXITED)
-          break;
-      } else {
-        printf("You have diverged \n");
-        auto result = diversion_session->diversion_step(task, cmd, 0);
-        if (result.status == DiversionSession::DIVERSION_EXITED)
-          break;
-      }
+      auto res = muplay_session->muplay_step(cmd);
+      if (res.status == MuplaySession::MuplayStatus::MUPLAY_EXITED)
+        break;
     }
+    /* --- */
+    // printf("Doing personal replay\n");
+    // int LIVE_FRAME = 158;
+    // DiversionSession::shr_ptr diversion_session = replay_session->clone_diversion();
+    // Task* task = diversion_session->find_task(replay_session->current_task()->tuid());
+    // while (true) {
+    //   RunCommand cmd = RUN_CONTINUE;
+    //
+    //   /* TODO Figure out how to refactor this if statement with inheritance */
+    //   if (!LIVE) {
+    //     FrameTime before_time = replay_session->trace_reader().time();
+    //     if (before_time == LIVE_FRAME)
+    //     {
+    //       LIVE = true;
+    //       diversion_session = replay_session->clone_diversion();
+    //       task = diversion_session->find_task(replay_session->current_task()->tuid());
+    //       continue;
+    //     }
+    //     /* Replaying */
+    //     auto result = replay_session->replay_step(cmd);
+    //     FrameTime after_time = replay_session->trace_reader().time();
+    //     DEBUG_ASSERT(after_time >= before_time && after_time <= before_time + 1);
+    //     ++step_count;
+    //     if (result.status == REPLAY_EXITED)
+    //       break;
+    //   } else {
+    //     /* Diverging -- Going live */
+    //     printf("You have diverged \n");
+    //     auto result = diversion_session->diversion_step(task, cmd, 0);
+    //     if (result.status == DiversionSession::DIVERSION_EXITED)
+    //       break;
+    //   }
+    // }
   }
 
 
@@ -114,6 +127,7 @@ namespace rr {
       if (!args.empty())
         fprintf(out, "Args are not empty\n");
 
+      /* TODO remove this frame matching code */
       TraceReader oldTrace(old_trace_dir);
       TraceReader newTrace(new_trace_dir);
 
@@ -140,7 +154,7 @@ namespace rr {
       // printf("Old trace was %lu events\n", muMatcher.oldFrames.size());
       // printf("New trace was %lu events\n", muMatcher.newFrames.size());
       /* Trigger this modified replay */
-      serve_muplay_no_debugger(new_trace_dir, flags, muTrace);
+      serve_muplay_no_debugger(old_trace_dir, new_trace_dir, flags, muTrace);
 
   }
 
