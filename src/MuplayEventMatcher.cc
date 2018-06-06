@@ -50,4 +50,11 @@ namespace rr {
     return res;
   }
 
+  bool is_frame_match(int index)
+  {
+    TraceFrame oldFrame = oldFrames.at(index);
+    TraceFrame currentFrame = newFrames.at(index);
+    return   oldFrame.event().str().compare(currentFrame.event().str())) 
+  }
+
 }

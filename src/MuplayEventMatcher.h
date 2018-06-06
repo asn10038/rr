@@ -21,6 +21,7 @@ namespace rr {
 
     /* Functions */
     std::vector<TraceFrame> combineTraces();
+    bool is_frame_match(int index);
   };
 } // namespace rr
 
