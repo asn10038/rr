@@ -58,55 +58,15 @@ namespace rr {
     /* Replaying from old log with new code */
     if (!LIVE)
     {
-      TraceFrame old_trace_frame = old_trace_reader->read_frame();
-      FrameTime current_before_time = replay_session->trace_reader().time();
-      FrameTime old_before_time = old_trace_frame.time();
 
-      // Catch old trace reader up to current trace reader
-      printf("Before loop check-- old_time %lu : current time %lu \n", old_before_time, current_before_time);
-      while (old_before_time < current_before_time)
-      {
-        try {
-          old_trace_frame = old_trace_reader->read_frame();
-          old_before_time = old_trace_reader->time();
-        } catch (const std::exception& ex){
-          break;
-        }
-
-      }
-      // 1) Check if frame about to be replayed matches frame
-      //    that is in old recording. Definition of matches is
-      //    yet to be determined
-      // oldFrame.event().str().compare(newFrame.event().str())
-      // try {
-      //   if (old_trace_frame.event().str().compare(replay_session->current_trace_frame().event().str()))
-      //   {
-      //     printf("The trace frames are the same \n");
-      //   } else {
-      //     printf("Divergence occurrs at: %lu | %lu\n", old_before_time, current_before_time);
-      //   }
-      // } catch (const std::exception& ex) {
-      //   printf("comparison threw an exception");
-      // }
-
-      auto result = replay_session->replay_step(command);
-      current_before_time = replay_session->trace_reader().time();
-
-      while (current_before_time < old_trace_frame.time()){
-        result = replay_session->replay_step(command);
-        current_before_time = replay_session->trace_reader().time();
-      }
-      if (result.status == REPLAY_EXITED) {
-        res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
-      } else {
-        res.status = MuplaySession::MuplayStatus::MUPLAY_CONTINUE;
-      }
       // 2) Replay from the old frame rather than the current frame
 
 
     } else {
       /* Create diversion session here and go live */
     }
+    if(command == RUN_SINGLESTEP)
+      printf("command");
 
     return res;
   }

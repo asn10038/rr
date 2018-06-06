@@ -52,9 +52,12 @@ namespace rr {
 
   bool is_frame_match(int index)
   {
-    TraceFrame oldFrame = oldFrames.at(index);
-    TraceFrame currentFrame = newFrames.at(index);
-    return   oldFrame.event().str().compare(currentFrame.event().str())) 
+    // TraceFrame oldFrame = oldFrames.at(index);
+    // TraceFrame currentFrame = newFrames.at(index);
+    // return   if (oldFrame.event().str().compare(newFrame.event().str()))
+    if(index > 0)
+      return true;
+    return false;
   }
 
 }
