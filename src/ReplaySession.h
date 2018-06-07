@@ -187,6 +187,11 @@ public:
    * for replay to reach.
    */
   const TraceFrame& current_trace_frame() const { return trace_frame; }
+
+  /**
+   * Replacing the current frame ANT_EDIT
+   */
+  void set_current_trace_frame(TraceFrame& new_trace_frame) { trace_frame = new_trace_frame; }
   /**
    * Time of the current frame
    */

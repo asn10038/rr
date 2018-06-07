@@ -50,23 +50,43 @@ namespace rr {
    * will create a diversion session and will go live.
    * TODO: There needs to be some sort of convergence with the old recorded log at
    * some point. Not sure how to detect when that should be or how to make that happen
+   * TODO: Figure out when appropriate to swap frames. There are some things that are
+   * specific to the new replay event.
    */
   MuplaySession::MuplayResult MuplaySession::muplay_step(RunCommand command)
   {
     bool LIVE = false;
     MuplaySession::MuplayResult res;
+    res.status = MuplaySession::MuplayStatus::MUPLAY_CONTINUE;
     /* Replaying from old log with new code */
     if (!LIVE)
     {
+      TraceFrame next_frame;
+      TraceFrame current_frame = replay_session->current_trace_frame();
 
-      // 2) Replay from the old frame rather than the current frame
+      if((last_swapped_frame.time()) != (current_frame.time()))
+        next_frame = old_trace_reader->read_frame();
+      else
+        next_frame = last_swapped_frame;
+
+      printf("next frame time: %lu : %lu current_frame_time\n", next_frame.time(), current_frame.time());
+      pid_t new_tid = replay_session->current_trace_frame().tid();
+      next_frame.set_tid(new_tid);
+      if (replay_session->current_trace_frame().time() > 25)
+      {
+          // replay_session->set_current_trace_frame(next_frame);
+      }
+      last_swapped_frame = next_frame;
+      auto result = replay_session->replay_step(command);
+      if (result.status == REPLAY_EXITED) {
+        res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
+        printf("REPLAY_EXITED\n");
+      }
 
 
     } else {
       /* Create diversion session here and go live */
     }
-    if(command == RUN_SINGLESTEP)
-      printf("command");
 
     return res;
   }

@@ -57,6 +57,9 @@ public:
    */
   void dump_raw(FILE* out = nullptr) const;
 
+  /* ANT edit set the tid to an arbitrary number. */
+  void set_tid(pid_t new_tid) { tid_ = new_tid; }
+
 private:
   friend class TraceReader;
   friend class TraceWriter;

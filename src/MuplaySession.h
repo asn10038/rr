@@ -65,6 +65,7 @@ namespace rr {
     std::shared_ptr<DiversionSession> diversion_session;
 
     std::shared_ptr<TraceReader> old_trace_reader;
+    TraceFrame last_swapped_frame;
   };
 
 } // namespace rr
