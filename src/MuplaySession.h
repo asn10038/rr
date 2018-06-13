@@ -55,7 +55,7 @@ namespace rr {
 
     MuplaySession();
     MuplaySession(ReplaySession& replaySession,
-                  const std::string old_trace_dir);
+                  const std::string new_trace_dir);
 
     /* TODO Figure out what these args should be */
     MuplayResult muplay_step();
@@ -64,7 +64,7 @@ namespace rr {
     std::shared_ptr<ReplaySession> replay_session;
     std::shared_ptr<DiversionSession> diversion_session;
 
-    std::shared_ptr<TraceReader> old_trace_reader;
+    std::shared_ptr<TraceReader> new_trace_reader;
     TraceFrame last_swapped_frame;
   };
 

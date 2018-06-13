@@ -11,10 +11,10 @@ namespace rr {
   MuplaySession::MuplaySession() : emu_fs(EmuFs::create()) {}
 
   MuplaySession::MuplaySession(ReplaySession& replaySession,
-                               const string old_trace_dir) :
+                               const string new_trace_dir) :
     emu_fs(EmuFs::create()),
     replay_session(replaySession.clone()),
-    old_trace_reader(new TraceReader(old_trace_dir))
+    new_trace_reader(new TraceReader(new_trace_dir))
     {
       /* always redirect the stdio of the replay session */
       ReplaySession::Flags flags;
@@ -35,9 +35,9 @@ namespace rr {
   MuplaySession::shr_ptr MuplaySession::create(const string& old_trace_dir,
                                const string& new_trace_dir)
   {
-    ReplaySession::shr_ptr replay_session = (ReplaySession::create(new_trace_dir));
+    ReplaySession::shr_ptr replay_session = (ReplaySession::create(old_trace_dir));
 
-    shr_ptr muplay_session(new MuplaySession(*replay_session, old_trace_dir));
+    shr_ptr muplay_session(new MuplaySession(*replay_session, new_trace_dir));
 
     return muplay_session;
   }
@@ -58,25 +58,22 @@ namespace rr {
     bool LIVE = false;
     MuplaySession::MuplayResult res;
     res.status = MuplaySession::MuplayStatus::MUPLAY_CONTINUE;
-    /* Replaying from old log with new code */
+    /* Replaying from old log trying to sub in new executable */
     if (!LIVE)
     {
       TraceFrame next_frame;
       TraceFrame current_frame = replay_session->current_trace_frame();
 
-      if((last_swapped_frame.time()) != (current_frame.time()))
-        next_frame = old_trace_reader->read_frame();
-      else
-        next_frame = last_swapped_frame;
+      /* TODO find the right frame in a less clugey way */
+      // if (current_frame.time() == 14) {
+      //   TraceFrame new_frame = new_trace_reader->read_frame();
+      //   while(new_frame.time() != 14)
+      //     new_frame = new_trace_reader->read_frame();
+      //     // set the tid to the recorded tid
+      //     new_frame.set_tid(current_frame.tid());
+      //   replay_session->set_current_trace_frame(new_frame);
+      // }
 
-      printf("next frame time: %lu : %lu current_frame_time\n", next_frame.time(), current_frame.time());
-      pid_t new_tid = replay_session->current_trace_frame().tid();
-      next_frame.set_tid(new_tid);
-      if (replay_session->current_trace_frame().time() > 25)
-      {
-          // replay_session->set_current_trace_frame(next_frame);
-      }
-      last_swapped_frame = next_frame;
       auto result = replay_session->replay_step(command);
       if (result.status == REPLAY_EXITED) {
         res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;

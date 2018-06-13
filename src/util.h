@@ -30,7 +30,7 @@ class KernelMapping;
 class Task;
 class TraceFrame;
 
-enum Completion { COMPLETE, INCOMPLETE };
+enum Completion { COMPLETE, INCOMPLETE, GO_LIVE };
 
 /**
  * Create a file named |filename| and dump |buf_len| words in |buf| to

@@ -427,7 +427,6 @@ static void restore_mapped_region(ReplayTask* t, AutoRemoteSyscalls& remote,
 static void process_execve(ReplayTask* t, const TraceFrame& trace_frame,
                            ReplayTraceStep* step) {
   step->action = TSTEP_RETIRE;
-
   /* First, exec a stub program */
   string stub_filename = find_exec_stub(trace_frame.regs().arch());
 
@@ -454,6 +453,7 @@ static void process_execve(ReplayTask* t, const TraceFrame& trace_frame,
   // Determine how much memory we'll need
   size_t filename_size = stub_filename.size() + 1;
   size_t total_size = filename_size + sizeof(size_t);
+
   if (memory_task != t) {
     saved_data = t->read_mem(remote_mem.cast<uint8_t>(), total_size);
   }

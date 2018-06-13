@@ -2421,9 +2421,7 @@ static void set_up_process(Session& session, const ScopedFd& err_fd,
                            const ScopedFd& sock_fd, int sock_fd_number) {
   /* TODO tracees can probably undo some of the setup below
    * ... */
-
   restore_initial_resource_limits();
-
   /* CLOEXEC so that the original fd here will be closed by the exec that's
    * about to happen.
    */
@@ -2547,6 +2545,7 @@ static void run_initial_child(Session& session, const ScopedFd& error_fd,
   StringVectorToCharArray argv_array(argv);
   StringVectorToCharArray envp_array(envp);
   SeccompFilter<struct sock_filter> filter = create_seccomp_filter();
+
   pid_t pid = getpid();
 
   set_up_process(session, error_fd, sock_fd, sock_fd_number);
@@ -2556,7 +2555,6 @@ static void run_initial_child(Session& session, const ScopedFd& error_fd,
 
   // Signal to tracer that we're configured.
   ::kill(pid, SIGSTOP);
-
   // This code must run after rr has taken ptrace control.
   set_up_seccomp_filter(filter, error_fd);
 
@@ -2574,7 +2572,6 @@ static void run_initial_child(Session& session, const ScopedFd& error_fd,
   syscall(SYS_write, -1, &sum, sizeof(sum));
 
   CPUIDBugDetector::run_detection_code();
-
   execve(exe_path_cstr, argv_array.get(), envp_array.get());
 
   switch (errno) {
@@ -2600,7 +2597,6 @@ static void run_initial_child(Session& session, const ScopedFd& error_fd,
                              const std::vector<std::string>& envp,
                              pid_t rec_tid) {
   DEBUG_ASSERT(session.tasks().size() == 0);
-
   int sockets[2];
   long ret = socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sockets);
   if (ret < 0) {

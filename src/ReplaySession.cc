@@ -1016,10 +1016,8 @@ void ReplaySession::check_ticks_consistency(ReplayTask* t, const Event& ev) {
   if (!done_initial_exec()) {
     return;
   }
-
   Ticks ticks_now = t->tick_count();
   Ticks trace_ticks = trace_frame.ticks();
-
   ASSERT(t, ticks_now == trace_ticks)
       << "ticks mismatch for '" << ev << "'; expected " << trace_ticks
       << ", got " << ticks_now << "";
@@ -1228,6 +1226,10 @@ Completion ReplaySession::patch_next_syscall(
   while (true) {
     TraceReader::MappedData data;
     bool found;
+    /* ANT TODO at some point this may need to be modified so it knows
+     * about the modified executable that is being loaded instead of the
+     * original
+     */
     KernelMapping km = t->trace_reader().read_mapped_region(&data, &found);
     if (!found) {
       break;
