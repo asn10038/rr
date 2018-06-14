@@ -18,6 +18,7 @@ namespace rr {
       /* always redirect the stdio of the replay session */
       ReplaySession::Flags flags;
       flags.redirect_stdio = true;
+      flags.muplay_enabled = true;
       replay_session->set_flags(flags);
     }
 
@@ -64,6 +65,10 @@ namespace rr {
       if (result.status == REPLAY_EXITED) {
         res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
         printf("REPLAY_EXITED\n");
+      } else if (result.status == GOING_LIVE)
+      {
+        printf(" REALIZED YOU HAVE TO GO LIVE!!!\n");
+        res.status = MUPLAY_LIVE;
       }
 
 

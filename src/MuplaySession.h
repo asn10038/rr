@@ -33,6 +33,8 @@ namespace rr {
       MUPLAY_CONTINUE,
       /* Tracees are dead don't call muplay_step() again */
       MUPLAY_EXITED,
+      /* Some code was executed.Reached Divergent state */
+      MUPLAY_LIVE
     };
 
     struct MuplayResult {

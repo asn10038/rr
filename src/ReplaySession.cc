@@ -461,8 +461,16 @@ Completion ReplaySession::cont_syscall_boundary(
     default:
       break;
   }
+  /* ANT EDIT */
   if (t->stop_sig()) {
+    /* Modifed version triggered an unexpected signal. Going live */
+    if (!flags.muplay_enabled)
       ASSERT(t, false) << "Replay got unrecorded signal " << t->get_siginfo();
+    else
+    {
+      return GO_LIVE;
+    }
+
   }
 
   if (t->seccomp_bpf_enabled &&
@@ -536,7 +544,10 @@ Completion ReplaySession::enter_syscall(ReplayTask* t,
       }
     }
 
-    if (cont_syscall_boundary(t, constraints) == INCOMPLETE) {
+    /* ANT EDIT */
+    Completion cont_to_boundary = cont_syscall_boundary(t,constraints);
+
+    if (cont_to_boundary == INCOMPLETE) {
       bool reached_target = syscall_bp_vm && SIGTRAP == t->stop_sig() &&
                             t->ip().decrement_by_bkpt_insn_length(t->arch()) ==
                                 syscall_instruction &&
@@ -556,6 +567,8 @@ Completion ReplaySession::enter_syscall(ReplayTask* t,
       } else {
         return INCOMPLETE;
       }
+    } else if (cont_to_boundary == GO_LIVE) {
+      return GO_LIVE;
     } else {
       // If we use the breakpoint optimization, we must get a SIGTRAP before
       // reaching a syscall, so cont_syscall_boundary must return INCOMPLETE.
@@ -564,6 +577,7 @@ Completion ReplaySession::enter_syscall(ReplayTask* t,
       t->validate_regs();
       t->finish_emulated_syscall();
     }
+    /* END OF REGION EFFECTED BY ANT EDIT */
   }
 
   if (current_trace_frame().event().Syscall().state == ENTERING_SYSCALL) {
@@ -1309,6 +1323,7 @@ Completion ReplaySession::try_one_trace_step(
     return advance_to_ticks_target(t, constraints);
   }
 
+  /* TODO Modify all of these to return GO_LIVE where appropriate */
   switch (current_step.action) {
     case TSTEP_RETIRE:
       return COMPLETE;
@@ -1558,8 +1573,15 @@ ReplayResult ReplaySession::replay_step(const StepConstraints& constraints) {
   // Now we know |t| hasn't died, so save it in break_status.
   result.break_status.task = t;
 
+  /* ANT EDIT */
+  Completion try_trace_step = try_one_trace_step(t, constraints);
+  if (flags.muplay_enabled && try_trace_step == GO_LIVE)
+  {
+    result.status = GOING_LIVE;
+    return result;
+  }
   /* Advance towards fulfilling |current_step|. */
-  if (try_one_trace_step(t, constraints) == INCOMPLETE) {
+  else if (try_trace_step == INCOMPLETE) {
     if (EV_TRACE_TERMINATION == trace_frame.event().type()) {
       // An irregular trace step had to read the
       // next trace frame, and that frame was an
@@ -1583,6 +1605,7 @@ ReplayResult ReplaySession::replay_step(const StepConstraints& constraints) {
     result.did_fast_forward = did_fast_forward;
     return result;
   }
+  /* END OF AREA EFFECTED BY ANT EDIT */
 
   result.did_fast_forward = did_fast_forward;
 

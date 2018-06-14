@@ -94,7 +94,10 @@ enum ReplayStatus {
   // Some execution was replayed. replay_step() can be called again.
   REPLAY_CONTINUE,
   // All tracees are dead. replay_step() should not be called again.
-  REPLAY_EXITED
+  REPLAY_EXITED,
+  /* ANT EDIT */
+  /* Some execution was replayed. Divergence was encountered and need to go live */
+  GOING_LIVE
 };
 
 struct ReplayResult {
@@ -285,6 +288,8 @@ public:
     Flags(const Flags& other) = default;
     bool redirect_stdio;
     bool share_private_mappings;
+    /* ANT EDIT */
+    bool muplay_enabled;
   };
   bool redirect_stdio() { return flags.redirect_stdio; }
   bool share_private_mappings() { return flags.share_private_mappings; }
