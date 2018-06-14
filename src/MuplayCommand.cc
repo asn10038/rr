@@ -4,7 +4,8 @@
 
 /* IDK what imports are actually needed */
 #include <sys/time.h>
-#include <experimental/filesystem>
+#include <sys/types.h>
+#include <dirent.h>
 
 
 #include "Command.h"
@@ -20,6 +21,7 @@
 #include "DiversionSession.h"
 #include "ReplayTask.h"
 #include "MuplaySession.h"
+
 /* ------------------------ */
 
 using namespace std;
@@ -38,7 +40,7 @@ namespace rr {
 
   MuplayCommand MuplayCommand::singleton(
     "muplay",
-    " rr muplay [old_tracedir] [new_executable -- has same name as old executable]\n"
+    " rr muplay [old_tracedir] [old_executable] [new_executable] \n"
   );
 
 /* Copy of ReplayFlags */
@@ -74,48 +76,78 @@ namespace rr {
     return result;
   }
 
-  /* Replaces the old executable with the new executable in the log */
-  /* Assumes the new and the old executable have the same name */
-  static string make_new_log(const string& old_trace_dir, const string& new_executable)
+  static string remove_filename_from_path(const string& path)
   {
-    string tmp_string = old_trace_dir;
-    printf("%s %s \n", old_trace_dir.c_str(), new_executable.c_str());
-    const char* dir = tmp_dir();
+    string tmp_string(path);
     size_t last_slash_idx = tmp_string.find_last_of("/");
+    /* remove trailing slash if there is one */
+    if (last_slash_idx == tmp_string.length()-1)
+    {
+      tmp_string.erase(tmp_string.length()-1);
+      last_slash_idx = tmp_string.find_last_of("/");
+    }
     if (std::string::npos != last_slash_idx)
     {
       tmp_string.erase(0, last_slash_idx + 1);
     }
-    string new_trace_dir = dir + tmp_string;
+    return tmp_string;
+  }
+
+  /* Replaces the old executable with the new executable in the log */
+  static string make_new_log(const string& old_trace_dir, const string& old_executable,
+                             const string& new_executable)
+  {
+    string tmp_string = old_trace_dir;
+    const char* temp_dir = tmp_dir();
+    string trace_name = remove_filename_from_path(old_trace_dir);
+    string new_trace_dir = temp_dir + string("/") + trace_name;
+    string cmd = "cp -r " + old_trace_dir + " " + temp_dir;
     /* TODO figure out how to check for errors */
-    string cmd = "cp -r " + old_trace_dir + " " + dir;
     /* copy the old trace to the tmp directory */
     exec(cmd.c_str());
 
-    /* Replace the executable in the old log */
-    printf("Executed copy command\n");
-
-
+    /* Find and remove old hardlink executable in the old log */
+    printf("the new trace dir: %s\n", new_trace_dir.c_str());
+    DIR *dir = opendir(new_trace_dir.c_str());
+    if(dir)
+    {
+      struct dirent *ent;
+      string old_executable_name = remove_filename_from_path(old_executable);
+      while((ent = readdir(dir)) != NULL)
+      {
+        string name = string(ent->d_name);
+        /* assuming the new executable has the same name as the old one */
+        if (name.find(old_executable_name) != std::string::npos)
+        {
+          /* removed old hardlinked executable */
+          string file_to_replace = new_trace_dir + string("/") + name;
+          cmd = "rm " + file_to_replace;
+          exec(cmd.c_str());
+          /* copy new executable to log with correct name */
+          cmd = "cp " + new_executable + " " + file_to_replace;
+          exec(cmd.c_str());
+        }
+      }
+    } else {
+      printf("Error opening new_trace_dir: %s\n", new_trace_dir.c_str());
+      exit(1);
+    }
 
     return new_trace_dir;
   }
   static void serve_muplay_no_debugger(const string& old_trace_dir,
+                                       const string& old_executable,
                                        const string& new_executable,
                                        const MuplayFlags& flags)
   {
     /* Make the new trace with the modified executable */
-    make_new_log(old_trace_dir, new_executable);
+    string new_trace_dir = make_new_log(old_trace_dir, old_executable, new_executable);
 
+    /* TODO check and actual flags here */
     if (flags.dont_launch_debugger)
-      printf("don't launch debugger\n");
+      {}
 
-    // uint32_t step_count = 0;
-    struct timeval last_dump_time;
-    Session::Statistics last_stats;
-    gettimeofday(&last_dump_time, NULL);
-    /* Beginning to moving things out of this class as appropriate */
-    MuplaySession::shr_ptr muplay_session = MuplaySession::create(old_trace_dir,
-                                                                  new_executable);
+    MuplaySession::shr_ptr muplay_session = MuplaySession::create(new_trace_dir);
     printf("Doing muplay replay\n");
     while(true) {
       RunCommand cmd = RUN_CONTINUE;
@@ -126,13 +158,14 @@ namespace rr {
   }
 
 
-  static void muplay(const string& old_trace_dir, const string& new_trace_dir,
-                     const MuplayFlags& flags, const vector<string>& args,
-                     FILE* out) {
+  static void muplay(const string& old_trace_dir, const string& old_executable,
+                     const string& new_executable, const MuplayFlags& flags,
+                     const vector<string>& args, FILE* out) {
       if (!args.empty())
         fprintf(out, "Args are not empty\n");
 
-      serve_muplay_no_debugger(old_trace_dir, new_trace_dir, flags);
+      serve_muplay_no_debugger(old_trace_dir, old_executable,
+                               new_executable, flags);
 
   }
 
@@ -140,22 +173,27 @@ namespace rr {
     MuplayFlags flags;
     // // TODO CODE TO PARSE OPTIONS
 
-    string old_trace_dir, new_trace_dir;
+    string old_trace_dir, old_executable, new_executable;
     if (!parse_optional_trace_dir(args, &old_trace_dir))
     {
-      printf("Problem parsing the old_trace_dir");
+      printf("Problem parsing the old_trace_dir\n");
       return 1;
     }
-    if (!parse_optional_trace_dir(args, &new_trace_dir))
+    if (!parse_optional_trace_dir(args, &old_executable))
     {
-      printf("Problem parsing the new_trace_dir");
+      printf("Problem parsing the old_executable\n");
+      return 1;
+    }
+    if (!parse_optional_trace_dir(args, &new_executable))
+    {
+      printf("Problem parsing the new_executable\n");
       return 1;
     }
 
+    /* TODO add checks that the args are the right number */
     if(args.size() > 0) {};
 
-    printf("about to go to muplay\n");
-    muplay(old_trace_dir, new_trace_dir, flags, args, stdout);
+    muplay(old_trace_dir, old_executable, new_executable, flags, args, stdout);
     return 0;
   }
 } // namespace rr

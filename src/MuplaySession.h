@@ -41,11 +41,10 @@ namespace rr {
     };
 
     /**
-     * Crete a muplay session that will create a session from new_trace_dir
-     * but replay from old_trace_dir until divergence is detected
+     * Create a muplay session from the modified log
+     * essentially a replay session with a swapped executable in the log
      */
-    static shr_ptr create(const std::string& old_trace_dir, const std::string& new_trace_dir);
-
+    static shr_ptr create(const std::string& trace_dir);
     /* TODO only accomodates RUN_CONTINUE */
     MuplayResult muplay_step(RunCommand command);
 
@@ -54,8 +53,7 @@ namespace rr {
     friend class DiversionSession;
 
     MuplaySession();
-    MuplaySession(ReplaySession& replaySession,
-                  const std::string new_trace_dir);
+    MuplaySession(ReplaySession& replaySession);
 
     /* TODO Figure out what these args should be */
     MuplayResult muplay_step();

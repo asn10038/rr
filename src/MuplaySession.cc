@@ -10,11 +10,10 @@ namespace rr {
 
   MuplaySession::MuplaySession() : emu_fs(EmuFs::create()) {}
 
-  MuplaySession::MuplaySession(ReplaySession& replaySession,
-                               const string new_trace_dir) :
+  MuplaySession::MuplaySession(ReplaySession& replaySession) :
     emu_fs(EmuFs::create()),
-    replay_session(replaySession.clone()),
-    new_trace_reader(new TraceReader(new_trace_dir))
+    replay_session(replaySession.clone())
+    // new_trace_reader(new TraceReader(new_trace_dir))
     {
       /* always redirect the stdio of the replay session */
       ReplaySession::Flags flags;
@@ -32,12 +31,11 @@ namespace rr {
     DEBUG_ASSERT(emu_fs->size() == 0);
   }
 
-  MuplaySession::shr_ptr MuplaySession::create(const string& old_trace_dir,
-                               const string& new_trace_dir)
+  MuplaySession::shr_ptr MuplaySession::create(const string& trace_dir)
   {
-    ReplaySession::shr_ptr replay_session = (ReplaySession::create(old_trace_dir));
+    ReplaySession::shr_ptr replay_session = (ReplaySession::create(trace_dir));
 
-    shr_ptr muplay_session(new MuplaySession(*replay_session, new_trace_dir));
+    shr_ptr muplay_session(new MuplaySession(*replay_session));
 
     return muplay_session;
   }
@@ -61,19 +59,7 @@ namespace rr {
     /* Replaying from old log trying to sub in new executable */
     if (!LIVE)
     {
-      TraceFrame next_frame;
-      TraceFrame current_frame = replay_session->current_trace_frame();
-
-      /* TODO find the right frame in a less clugey way */
-      // if (current_frame.time() == 14) {
-      //   TraceFrame new_frame = new_trace_reader->read_frame();
-      //   while(new_frame.time() != 14)
-      //     new_frame = new_trace_reader->read_frame();
-      //     // set the tid to the recorded tid
-      //     new_frame.set_tid(current_frame.tid());
-      //   replay_session->set_current_trace_frame(new_frame);
-      // }
-
+      printf("going to replay frame num: %lu\n", replay_session->current_trace_frame().time());
       auto result = replay_session->replay_step(command);
       if (result.status == REPLAY_EXITED) {
         res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
