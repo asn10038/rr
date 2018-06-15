@@ -66,6 +66,7 @@ namespace rr {
 
     std::shared_ptr<TraceReader> new_trace_reader;
     TraceFrame last_swapped_frame;
+    bool LIVE;
   };
 
 } // namespace rr

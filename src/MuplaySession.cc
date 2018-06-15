@@ -3,7 +3,7 @@
 #include "MuplaySession.h"
 #include "DiversionSession.h"
 #include "ReplaySession.h"
-
+# include "ReplayTask.h"
 using namespace std;
 
 namespace rr {
@@ -12,7 +12,8 @@ namespace rr {
 
   MuplaySession::MuplaySession(ReplaySession& replaySession) :
     emu_fs(EmuFs::create()),
-    replay_session(replaySession.clone())
+    replay_session(replaySession.clone()),
+    LIVE(false)
     // new_trace_reader(new TraceReader(new_trace_dir))
     {
       /* always redirect the stdio of the replay session */
@@ -49,15 +50,13 @@ namespace rr {
    * will create a diversion session and will go live.
    * TODO: There needs to be some sort of convergence with the old recorded log at
    * some point. Not sure how to detect when that should be or how to make that happen
-   * TODO: Figure out when appropriate to swap frames. There are some things that are
-   * specific to the new replay event.
    */
   MuplaySession::MuplayResult MuplaySession::muplay_step(RunCommand command)
   {
-    bool LIVE = false;
     MuplaySession::MuplayResult res;
     res.status = MuplaySession::MuplayStatus::MUPLAY_CONTINUE;
-    /* Replaying from old log trying to sub in new executable */
+    Task* task;
+
     if (!LIVE)
     {
       printf("going to replay frame num: %lu\n", replay_session->current_trace_frame().time());
@@ -69,11 +68,21 @@ namespace rr {
       {
         printf(" REALIZED YOU HAVE TO GO LIVE!!!\n");
         res.status = MUPLAY_LIVE;
+        LIVE = true;
+        diversion_session = replay_session->clone_diversion();
+        task = diversion_session -> find_task(replay_session->current_task()->tuid());
+        printf("made it to the end of the if statement\n");
       }
-
-
-    } else {
-      /* Create diversion session here and go live */
+    }
+    if(LIVE)
+    {
+      printf("Entered the live if statement\n");
+      auto result = diversion_session->diversion_step(task, command);
+      if (result.status == DiversionSession::DIVERSION_EXITED)
+      {
+        res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
+        printf("GOING LIVE EXITED");
+      }
     }
 
     return res;
