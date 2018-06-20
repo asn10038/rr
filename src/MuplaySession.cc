@@ -1,9 +1,10 @@
 /* Combination of diversion and replay session */
 
+#include "log.h"
 #include "MuplaySession.h"
 #include "DiversionSession.h"
 #include "ReplaySession.h"
-# include "ReplayTask.h"
+#include "ReplayTask.h"
 using namespace std;
 
 namespace rr {
@@ -59,29 +60,38 @@ namespace rr {
 
     if (!LIVE)
     {
-      printf("going to replay frame num: %lu\n", replay_session->current_trace_frame().time());
+      LOG(debug) << "going to replay frame num:" << replay_session->current_trace_frame().time() << "\n";
       auto result = replay_session->replay_step(command);
       if (result.status == REPLAY_EXITED) {
         res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
-        printf("REPLAY_EXITED\n");
+        LOG(debug) << "REPLAY_EXITED\n";
       } else if (result.status == GOING_LIVE)
       {
-        printf(" REALIZED YOU HAVE TO GO LIVE!!!\n");
+        LOG(debug) << "REALIZED YOU HAVE TO GO LIVE!!!\n";
         res.status = MUPLAY_LIVE;
         LIVE = true;
         diversion_session = replay_session->clone_diversion();
         task = diversion_session -> find_task(replay_session->current_task()->tuid());
-        printf("made it to the end of the if statement\n");
+        count = 0;
       }
     }
     if(LIVE)
     {
-      printf("Entered the live if statement\n");
+      LOG(debug) << "Entered the live if statement\n";
+      /* TODO set task to class variable so you don't reset it each time */
+
+      task = diversion_session -> find_task(replay_session->current_task()->tuid());
       auto result = diversion_session->diversion_step(task, command);
+      LOG(debug) << "Successfully called diversion_step()\n";
       if (result.status == DiversionSession::DIVERSION_EXITED)
       {
         res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
-        printf("GOING LIVE EXITED");
+        LOG(debug)<<"GOING LIVE EXITED";
+      }
+      count++;
+      if (count > 10) {
+        LOG(debug) << "count is breaking the loop\n";
+        res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
       }
     }
 

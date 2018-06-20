@@ -50,7 +50,6 @@ static void execute_syscall(Task* t) {
 template <typename Arch>
 static void process_syscall_arch(Task* t, int syscallno) {
   LOG(debug) << "Processing " << syscall_name(syscallno, Arch::arch());
-
   if (syscallno == Arch::ioctl && t->is_desched_event_syscall()) {
     // The arm/disarm-desched ioctls are emulated as no-ops.
     // However, because the rr preload library expects these
