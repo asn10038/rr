@@ -468,10 +468,12 @@ Completion ReplaySession::cont_syscall_boundary(
       ASSERT(t, false) << "Replay got unrecorded signal " << t->get_siginfo();
     else
     {
+      LOG(debug) << "Unexpected signal that triggers diversion was: " << t->get_siginfo();
       return GO_LIVE;
     }
 
   }
+  /* END OF ANT EDIT */
 
   if (t->seccomp_bpf_enabled &&
       syscall_seccomp_ordering_ == PTRACE_SYSCALL_BEFORE_SECCOMP_UNKNOWN) {
@@ -546,6 +548,9 @@ Completion ReplaySession::enter_syscall(ReplayTask* t,
 
     /* ANT EDIT */
     Completion cont_to_boundary = cont_syscall_boundary(t,constraints);
+
+    // LOG(debug) << t->regs().ip();
+
 
     if (cont_to_boundary == INCOMPLETE) {
       bool reached_target = syscall_bp_vm && SIGTRAP == t->stop_sig() &&

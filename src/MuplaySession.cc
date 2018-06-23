@@ -1,4 +1,5 @@
 /* Combination of diversion and replay session */
+#include <sys/ptrace.h>
 
 #include "log.h"
 #include "MuplaySession.h"
@@ -89,10 +90,10 @@ namespace rr {
         LOG(debug)<<"GOING LIVE EXITED";
       }
       count++;
-      if (count > 10) {
-        LOG(debug) << "count is breaking the loop\n";
-        res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
-      }
+      // if (count > 3) {
+      //   LOG(debug) << "count is breaking the loop\n";
+      //   res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
+      // }
     }
 
     return res;
