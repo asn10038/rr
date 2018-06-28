@@ -147,7 +147,11 @@ namespace rr {
     if (flags.dont_launch_debugger)
       {}
 
-    MuplaySession::shr_ptr muplay_session = MuplaySession::create(new_trace_dir);
+
+    // MuplaySession::shr_ptr muplay_session = MuplaySession::create(new_trace_dir);
+    if(new_trace_dir.size()){}
+    MuplaySession::shr_ptr muplay_session = MuplaySession::create(old_trace_dir);
+
     printf("Doing muplay replay\n");
     while(true) {
       RunCommand cmd = RUN_CONTINUE;
