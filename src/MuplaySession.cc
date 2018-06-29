@@ -15,7 +15,7 @@ namespace rr {
 
   MuplaySession::MuplaySession(ReplaySession& replaySession) :
     emu_fs(EmuFs::create()),
-    replay_session(replaySession.clone()),
+    replay_session(&replaySession),
     LIVE(false)
     // new_trace_reader(new TraceReader(new_trace_dir))
     {
@@ -123,9 +123,11 @@ namespace rr {
         if(count == 150)
           start = false;
         if (WSTOPSIG(ws) == 11)
-          break;
+        {
+          printf("Seg Fault\n");
+        }
       }
-      printf("COUNT IS: %i", count);
+      printf("COUNT IS: %i\n", count);
 
       // for(int i=0; i<20; i++) {
       //   printf("calling ptrace_if_alive\n");
