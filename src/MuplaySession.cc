@@ -11,12 +11,11 @@ using namespace std;
 
 namespace rr {
 
-  MuplaySession::MuplaySession() : emu_fs(EmuFs::create()) {}
+  // MuplaySession::MuplaySession() : emu_fs(EmuFs::create()) {}
 
-  MuplaySession::MuplaySession(ReplaySession& replaySession) :
-    emu_fs(EmuFs::create()),
-    replay_session(&replaySession),
-    LIVE(false)
+  MuplaySession::MuplaySession(const ReplaySession::shr_ptr& replaySession)
+   : replay_session(replaySession),
+     LIVE(false)
     // new_trace_reader(new TraceReader(new_trace_dir))
     {
       /* always redirect the stdio of the replay session */
@@ -31,18 +30,16 @@ namespace rr {
     // we've cleaned up here, but sessions can be created and
     // destroyed many times, and we don't want to temporarily hog
     // resources.
-    kill_all_tasks();
-    DEBUG_ASSERT(tasks().size() == 0 && vms().size() == 0);
-    DEBUG_ASSERT(emu_fs->size() == 0);
+    // kill_all_tasks();
+    // DEBUG_ASSERT(tasks().size() == 0 && vms().size() == 0);
+    // DEBUG_ASSERT(emu_fs->size() == 0);
   }
 
   MuplaySession::shr_ptr MuplaySession::create(const string& trace_dir)
   {
-    ReplaySession::shr_ptr replay_session = (ReplaySession::create(trace_dir));
-
-    shr_ptr muplay_session(new MuplaySession(*replay_session));
-
-    return muplay_session;
+    ReplaySession::shr_ptr rs(ReplaySession::create(trace_dir));
+    shr_ptr session(new MuplaySession(rs));
+    return session;
   }
 
 
@@ -58,15 +55,16 @@ namespace rr {
   {
     MuplaySession::MuplayResult res;
     res.status = MuplaySession::MuplayStatus::MUPLAY_CONTINUE;
-    Task* task;
+    // Task* task;
 
     if (!LIVE)
     {
       // LOG(debug) << "going to replay frame num:" << replay_session->current_trace_frame().time() << "\n";
-      // auto result = replay_session->replay_step(command);
-      // if (result.status == REPLAY_EXITED) {
-      //   res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
-      //   LOG(debug) << "REPLAY_EXITED\n";
+      auto result = replay_session->replay_step(command);
+      if (result.status == REPLAY_EXITED) {
+        res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
+        LOG(debug) << "REPLAY_EXITED\n";
+      }
       // } else if (result.status == GOING_LIVE)
       // {
       //   LOG(debug) << "REALIZED YOU HAVE TO GO LIVE!!!\n";
@@ -76,58 +74,62 @@ namespace rr {
       //   task = diversion_session -> find_task(replay_session->current_task()->tuid());
       //   count = 0;
       // }
-      task = replay_session->current_task();
 
-      int ws;
-      int count = 0;
-      bool start = true;
-      while (start || WIFSTOPPED(ws) || WIFSIGNALED(ws)) {
+      // task = replay_session->current_task();
 
-        if(start)
-          start = false;
+      // int ws;
+      // int count = 0;
+      // bool start = true;
+      // while (start || WIFSTOPPED(ws) || WIFSIGNALED(ws)) {
+
+        // if(start)
+          // start = false;
         // struct user_regs_struct tregs;
         // task->ptrace_if_alive(PTRACE_GETREGS, 0, (void*)(uintptr_t)&tregs);
-        if(task->status().stop_sig())
-          printf("PROCESS IS STOPPED\n");
-        else
-          printf("PROCESS IS NOT STOPPED\n");
+
+        // if(task->status().stop_sig())
+          // printf("PROCESS IS STOPPED\n");
+        // else
+          // printf("PROCESS IS NOT STOPPED\n");
         // ptrace(PTRACE_GETREGS, task->tid, 0 ,&tregs);
-        printf("The task being traced is: %i\n", task->tid);
-        printf("The recorded tid is: %i\n", task->rec_tid);
+        // printf("The task being traced is: %i\n", task->tid);
+        // printf("The recorded tid is: %i\n", task->rec_tid);
         // unsigned instr = task->ptrace_if_alive(PTRACE_PEEKTEXT, tregs.rip, 0);
 
         // printf("icount = %i, RIP=0x%llx, instr=0x%08x\n", count, tregs.rip, instr);
 
-        if(task->ptrace_if_alive(PTRACE_SINGLESTEP, nullptr, (void*)(uintptr_t) 0) < 0)
-        {
-          printf("ERROR in PTRACE SINGLESTEP\n");
-          break;
-        }
-        wait(&ws);
+        // if((task->ptrace_if_alive(PTRACE_SINGLESTEP, nullptr, (void*)(uintptr_t) 0)) < 0)
+        // {
+        //   printf("ERROR in PTRACE SINGLESTEP\n");
+        //   break;
+        // }
+        // task->ptrace_if_alive(PTRACE_SINGLESTEP, nullptr, (void*)(uintptr_t) 0);
+        // wait(&ws);
         // printf("ws is: %i\n", ws);
 
-        if(WIFEXITED(ws))
-          printf("WIFEXITED\n");
-        if(WIFSIGNALED(ws))
-          printf("WIFSIGNALED\n");
-        if(WCOREDUMP(ws))
-          printf("WCOREDUMP\n");
-        if(WIFSTOPPED(ws)) {
-          count++;
-          printf("WIFSTOPPED by: %i\n", WSTOPSIG(ws));
-        }
+        // if(WIFEXITED(ws))
+          // printf("WIFEXITED\n");
+        // if(WIFSIGNALED(ws))
+          // printf("WIFSIGNALED\n");
+        // if(WCOREDUMP(ws))
+        // printf("WCOREDUMP\n");
+        // if(WIFSTOPPED(ws)) {
+          // count++;
+          // printf("WIFSTOPPED by: %i\n", WSTOPSIG(ws));
+        // }
 
-        if(WIFCONTINUED(ws))
-          printf("WCONTINUED\n");
+        // if(WIFCONTINUED(ws))
+          // printf("WCONTINUED\n");
         // count ++;
-        if(count == 150)
-          start = false;
-        if (WSTOPSIG(ws) == 11)
-        {
-          printf("Seg Fault\n");
-        }
-      }
-      printf("COUNT IS: %i\n", count);
+      //   if(count == 150)
+      //     start = false;
+      //   if (WSTOPSIG(ws) == 11)
+      //   {
+      //     printf("Seg Fault\n");
+      //     exit(1);
+      //   }
+      // }
+      // printf("COUNT IS: %i\n", count);
 
       // for(int i=0; i<20; i++) {
       //   printf("calling ptrace_if_alive\n");
@@ -135,28 +137,29 @@ namespace rr {
       //
       //   if (!err)
       //     printf("Error returned from ptrace_if_alive\n");
-      // }
-      res.status = MUPLAY_EXITED;
-    }
-    if(LIVE)
-    {
-      LOG(debug) << "Entered the live if statement\n";
-      /* TODO set task to class variable so you don't reset it each time */
+      }
+      // res.status = MUPLAY_EXITED;
 
-      task = diversion_session -> find_task(replay_session->current_task()->tuid());
-      auto result = diversion_session->diversion_step(task, command);
-      LOG(debug) << "Successfully called diversion_step()\n";
-      if (result.status == DiversionSession::DIVERSION_EXITED)
-      {
-        res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
-        LOG(debug)<<"GOING LIVE EXITED";
-      }
-      count++;
-      if (count > 3) {
-        LOG(debug) << "count is breaking the loop\n";
-        res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
-      }
-    }
+    // }
+    // if(LIVE)
+    // {
+    //   LOG(debug) << "Entered the live if statement\n";
+    //   /* TODO set task to class variable so you don't reset it each time */
+    //
+    //   task = diversion_session -> find_task(replay_session->current_task()->tuid());
+    //   auto result = diversion_session->diversion_step(task, command);
+    //   LOG(debug) << "Successfully called diversion_step()\n";
+    //   if (result.status == DiversionSession::DIVERSION_EXITED)
+    //   {
+    //     res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
+    //     LOG(debug)<<"GOING LIVE EXITED";
+    //   }
+    //   count++;
+    //   if (count > 3) {
+    //     LOG(debug) << "count is breaking the loop\n";
+    //     res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
+    //   }
+    // }
 
     return res;
   }

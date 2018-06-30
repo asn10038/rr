@@ -5,6 +5,7 @@
 
 #include "EmuFs.h"
 #include "Session.h"
+#include "ReplaySession.h"
 
 
 namespace rr {
@@ -17,15 +18,15 @@ namespace rr {
    * read from the log as well just as a replay session would
    */
 
-  class MuplaySession : public Session {
+  class MuplaySession {
   public:
     typedef std::shared_ptr<MuplaySession> shr_ptr;
 
     ~MuplaySession();
 
-    EmuFs& emufs() const { return *emu_fs; }
+    // EmuFs& emufs() const { return *emu_fs; }
 
-    virtual MuplaySession* as_muplay() override { return this; }
+    // virtual MuplaySession* as_muplay() override { return this; }
 
 
     enum MuplayStatus {
@@ -55,17 +56,14 @@ namespace rr {
     friend class DiversionSession;
 
     MuplaySession();
-    MuplaySession(ReplaySession& replaySession);
+    MuplaySession(const ReplaySession::shr_ptr& replaySession);
 
     /* TODO Figure out what these args should be */
     MuplayResult muplay_step();
 
-    std::shared_ptr<EmuFs> emu_fs;
-    std::shared_ptr<ReplaySession> replay_session;
-    std::shared_ptr<DiversionSession> diversion_session;
+    ReplaySession::shr_ptr replay_session;
+    DiversionSession::shr_ptr diversion_session;
 
-    std::shared_ptr<TraceReader> new_trace_reader;
-    TraceFrame last_swapped_frame;
     bool LIVE;
     /* TODO remove this variable */
     int count;
