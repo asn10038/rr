@@ -55,16 +55,33 @@ namespace rr {
   {
     MuplaySession::MuplayResult res;
     res.status = MuplaySession::MuplayStatus::MUPLAY_CONTINUE;
-    // Task* task;
+    DiversionSession::shr_ptr ds;
+    Task* t = nullptr;
 
     if (!LIVE)
     {
       // LOG(debug) << "going to replay frame num:" << replay_session->current_trace_frame().time() << "\n";
-      auto result = replay_session->replay_step(command);
-      if (result.status == REPLAY_EXITED) {
-        res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
-        LOG(debug) << "REPLAY_EXITED\n";
+      LOG(debug) << " The instruction pointer: " << replay_session->current_task()->regs().ip();
+      if (replay_session->current_task()->regs().ip() == 0x4000c4)
+      {
+        LIVE = true;
+        LOG(debug) << "try to trigger go live myself\n";
+        ds = replay_session -> clone_diversion();
+        t = replay_session->current_task();
+        ds->diversion_step(t, RUN_CONTINUE, 0);
+        ds->diversion_step(t, RUN_SINGLESTEP, 0);
+        // replay_session->current_task()->resume_execution(RESUME_CONT, RESUME_NONBLOCKING, RESUME_NO_TICKS);
+      } else {
+        auto result = replay_session->replay_step(command);
+        if (result.status == REPLAY_EXITED) {
+          res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
+          LOG(debug) << "REPLAY_EXITED\n";
+        }
       }
+    } else {
+
+    }
+
       // } else if (result.status == GOING_LIVE)
       // {
       //   LOG(debug) << "REALIZED YOU HAVE TO GO LIVE!!!\n";
@@ -137,7 +154,7 @@ namespace rr {
       //
       //   if (!err)
       //     printf("Error returned from ptrace_if_alive\n");
-      }
+      // }
       // res.status = MUPLAY_EXITED;
 
     // }
