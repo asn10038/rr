@@ -64,84 +64,86 @@ namespace rr {
    * copied from https://stackoverflow.com/questions/478898/how-to-execute-a-command-and-get-output-of-command-within-c-using-posix
    */
 
-  std::string exec(const char* cmd) {
-    std::array<char, 128> buffer;
-    std::string result;
-    std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
-    if (!pipe) throw std::runtime_error("popen() failed!");
-    while (!feof(pipe.get())) {
-        if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
-            result += buffer.data();
-    }
-    return result;
-  }
-
-  static string remove_filename_from_path(const string& path)
-  {
-    string tmp_string(path);
-    size_t last_slash_idx = tmp_string.find_last_of("/");
-    /* remove trailing slash if there is one */
-    if (last_slash_idx == tmp_string.length()-1)
-    {
-      tmp_string.erase(tmp_string.length()-1);
-      last_slash_idx = tmp_string.find_last_of("/");
-    }
-    if (std::string::npos != last_slash_idx)
-    {
-      tmp_string.erase(0, last_slash_idx + 1);
-    }
-    return tmp_string;
-  }
+  // std::string exec(const char* cmd) {
+  //   std::array<char, 128> buffer;
+  //   std::string result;
+  //   std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
+  //   if (!pipe) throw std::runtime_error("popen() failed!");
+  //   while (!feof(pipe.get())) {
+  //       if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
+  //           result += buffer.data();
+  //   }
+  //   return result;
+  // }
+  //
+  // static string remove_filename_from_path(const string& path)
+  // {
+  //   string tmp_string(path);
+  //   size_t last_slash_idx = tmp_string.find_last_of("/");
+  //   /* remove trailing slash if there is one */
+  //   if (last_slash_idx == tmp_string.length()-1)
+  //   {
+  //     tmp_string.erase(tmp_string.length()-1);
+  //     last_slash_idx = tmp_string.find_last_of("/");
+  //   }
+  //   if (std::string::npos != last_slash_idx)
+  //   {
+  //     tmp_string.erase(0, last_slash_idx + 1);
+  //   }
+  //   return tmp_string;
+  // }
 
   /* Replaces the old executable with the new executable in the log */
-  static string make_new_log(const string& old_trace_dir, const string& old_executable,
-                             const string& new_executable)
-  {
-    string tmp_string = old_trace_dir;
-    const char* temp_dir = tmp_dir();
-    string trace_name = remove_filename_from_path(old_trace_dir);
-    string new_trace_dir = temp_dir + string("/") + trace_name;
-    string cmd = "cp -r " + old_trace_dir + " " + temp_dir;
-    /* TODO figure out how to check for errors */
-    /* copy the old trace to the tmp directory */
-    exec(cmd.c_str());
+  // static string make_new_log(const string& old_trace_dir, const string& old_executable,
+  //                            const string& new_executable)
+  // {
+  //   string tmp_string = old_trace_dir;
+  //   const char* temp_dir = tmp_dir();
+  //   string trace_name = remove_filename_from_path(old_trace_dir);
+  //   string new_trace_dir = temp_dir + string("/") + trace_name;
+  //   string cmd = "cp -r " + old_trace_dir + " " + temp_dir;
+  //   /* TODO figure out how to check for errors */
+  //   /* copy the old trace to the tmp directory */
+  //   exec(cmd.c_str());
+  //
+  //   /* Find and remove old hardlink executable in the old log */
+  //   printf("the new trace dir: %s\n", new_trace_dir.c_str());
+  //   DIR *dir = opendir(new_trace_dir.c_str());
+  //   if(dir)
+  //   {
+  //     struct dirent *ent;
+  //     string old_executable_name = remove_filename_from_path(old_executable);
+  //     while((ent = readdir(dir)) != NULL)
+  //     {
+  //       string name = string(ent->d_name);
+  //       /* assuming the new executable has the same name as the old one */
+  //       if (name.find(old_executable_name) != std::string::npos)
+  //       {
+  //         /* removed old hardlinked executable */
+  //         string file_to_replace = new_trace_dir + string("/") + name;
+  //         cmd = "rm " + file_to_replace;
+  //         exec(cmd.c_str());
+  //         /* copy new executable to log with correct name */
+  //         cmd = "cp " + new_executable + " " + file_to_replace;
+  //         exec(cmd.c_str());
+  //       }
+  //     }
+  //   } else {
+  //     printf("Error opening new_trace_dir: %s\n", new_trace_dir.c_str());
+  //     exit(1);
+  //   }
+  //
+  //   return new_trace_dir;
+  // }
 
-    /* Find and remove old hardlink executable in the old log */
-    printf("the new trace dir: %s\n", new_trace_dir.c_str());
-    DIR *dir = opendir(new_trace_dir.c_str());
-    if(dir)
-    {
-      struct dirent *ent;
-      string old_executable_name = remove_filename_from_path(old_executable);
-      while((ent = readdir(dir)) != NULL)
-      {
-        string name = string(ent->d_name);
-        /* assuming the new executable has the same name as the old one */
-        if (name.find(old_executable_name) != std::string::npos)
-        {
-          /* removed old hardlinked executable */
-          string file_to_replace = new_trace_dir + string("/") + name;
-          cmd = "rm " + file_to_replace;
-          exec(cmd.c_str());
-          /* copy new executable to log with correct name */
-          cmd = "cp " + new_executable + " " + file_to_replace;
-          exec(cmd.c_str());
-        }
-      }
-    } else {
-      printf("Error opening new_trace_dir: %s\n", new_trace_dir.c_str());
-      exit(1);
-    }
-
-    return new_trace_dir;
-  }
   static void serve_muplay_no_debugger(const string& old_trace_dir,
                                        const string& old_executable,
                                        const string& new_executable,
                                        const MuplayFlags& flags)
   {
-    /* Make the new trace with the modified executable */
-    string new_trace_dir = make_new_log(old_trace_dir, old_executable, new_executable);
+    /* Commenting this out for exeperimenting with libunwind Make the new trace with the modified executable */
+    // string new_trace_dir = make_new_log(old_trace_dir, old_executable, new_executable);
+    if(old_executable.size() > new_executable.size()) {}
 
     /* TODO check and actual flags here */
     if (flags.dont_launch_debugger)
@@ -149,9 +151,9 @@ namespace rr {
 
 
     // MuplaySession::shr_ptr muplay_session = MuplaySession::create(new_trace_dir);
-    if(new_trace_dir.size()){}
+    // if(new_trace_dir.size()){}
 
-    
+
     MuplaySession::shr_ptr muplay_session = MuplaySession::create(old_trace_dir);
 
     printf("Doing muplay replay\n");
