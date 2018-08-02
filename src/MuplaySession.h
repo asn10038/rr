@@ -67,6 +67,9 @@ namespace rr {
     bool LIVE;
     /* TODO remove this variable */
     int count;
+
+    /* pid of the current task under observation */
+    pid_t pid;
   };
 
 } // namespace rr

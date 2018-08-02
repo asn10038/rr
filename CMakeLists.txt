@@ -216,6 +216,29 @@ set_source_files_properties(${BROTLI_FILES}
                             PROPERTIES COMPILE_FLAGS ${RR_FLAGS_RELEASE})
 # ==== brotli ====
 
+
+# ANT EDIT TO ADD LIBUNWIND
+# NOTE this depends on having libunwind installed in /usr/local as
+# a system wide library. To fix this should probably have this as
+# an independent target that gets recompiled each time through.
+
+# ==== libunwind ====
+
+add_library(libunwind STATIC IMPORTED GLOBAL)
+set_target_properties(libunwind PROPERTIES IMPORTED_LOCATION /usr/local/lib/libunwind.a)
+add_library(libunwind-coredump STATIC IMPORTED GLOBAL)
+set_target_properties(libunwind-coredump PROPERTIES IMPORTED_LOCATION /usr/local/lib/libunwind-coredump.a)
+add_library(libunwind-generic STATIC IMPORTED GLOBAL)
+set_target_properties(libunwind-generic PROPERTIES IMPORTED_LOCATION /usr/local/lib/libunwind-generic.a)
+add_library(libunwind-ptrace STATIC IMPORTED GLOBAL)
+set_target_properties(libunwind-ptrace PROPERTIES IMPORTED_LOCATION /usr/local/lib/libunwind-ptrace.a)
+add_library(libunwind-setjmp STATIC IMPORTED GLOBAL)
+set_target_properties(libunwind-setjmp PROPERTIES IMPORTED_LOCATION /usr/local/lib/libunwind-setjmp.a)
+add_library(libunwind-x86_64 STATIC IMPORTED GLOBAL)
+set_target_properties(libunwind-x86_64 PROPERTIES IMPORTED_LOCATION /usr/local/lib/libunwind-x86_64.a)
+
+# ==== libunwind ====
+
 find_path(SECCOMP NAMES "linux/seccomp.h")
 if(NOT SECCOMP)
   message(FATAL_ERROR "Couldn't find linux/seccomp.h. You may need to upgrade your kernel.")
@@ -278,6 +301,8 @@ set_source_files_properties(src/preload/syscallbuf.c
 include_directories("${PROJECT_SOURCE_DIR}/include")
 include_directories("${PROJECT_SOURCE_DIR}/third-party/proc-service")
 include_directories("${PROJECT_SOURCE_DIR}/third-party/brotli/include")
+#ANT EDIT TO ADD LIBUNWIND
+include_directories("${PROJECT_SOURCE_DIR}/third-party/libunwind/include")
 # We need to know where our generated files are.
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
@@ -475,6 +500,13 @@ target_link_libraries(rr
   ${CMAKE_DL_LIBS}
   -lrt
   brotli
+  #ANT edit to add libunwind
+  libunwind
+  libunwind-generic
+  libunwind-coredump
+  libunwind-ptrace
+  libunwind-x86_64
+  libunwind-setjmp
 )
 
 if(staticlibs)

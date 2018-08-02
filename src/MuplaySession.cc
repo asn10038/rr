@@ -7,6 +7,7 @@
 #include "DiversionSession.h"
 #include "ReplaySession.h"
 #include "ReplayTask.h"
+#include "libunwind-ptrace.h"
 using namespace std;
 
 namespace rr {
@@ -15,7 +16,8 @@ namespace rr {
 
   MuplaySession::MuplaySession(const ReplaySession::shr_ptr& replaySession)
    : replay_session(replaySession),
-     LIVE(false)
+     LIVE(false),
+     pid(-1)
     // new_trace_reader(new TraceReader(new_trace_dir))
     {
       /* always redirect the stdio of the replay session */
@@ -62,13 +64,55 @@ namespace rr {
     {
       // LOG(debug) << "going to replay frame num:" << replay_session->current_trace_frame().time() << "\n";
       auto result = replay_session->replay_step(command);
+
+      // get the pid of the process under replay
+      if (pid == -1)
+      {
+        /* TODO figure out a way to track if the current process changes */
+        pid = replay_session->current_task()->tid;
+      }
+      // check for exit
       if (result.status == REPLAY_EXITED) {
         res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
         LOG(debug) << "REPLAY_EXITED\n";
+        return res;
       }
+
+
+      /* doing stack unwinding */
+      unw_addr_space_t as = unw_create_addr_space(&_UPT_accessors, 0);
+
+
+      void *context = _UPT_create(pid);
+      unw_cursor_t cursor;
+      if (unw_init_remote(&cursor, as, context) != 0)
+      {
+        LOG(debug) << "Couldn't initialize for remote unwinding -- process probably exited";
+      }
+
+      do {
+        unw_word_t offset, pc;
+        char sym[4096];
+        if (unw_get_reg(&cursor, UNW_REG_IP, &pc))
+          LOG(debug) << "ERROR: cannot read program counter\n";
+
+        printf("0x%lx: ", pc);
+
+        if (unw_get_proc_name(&cursor, sym, sizeof(sym), &offset) == 0)
+          printf("(%s+0x%lx)\n", sym, offset);
+        else
+          printf("-- no symbol name found\n");
+      } while (unw_step(&cursor) > 0);
+
+_UPT_destroy(context);
+
+      /* The unwinding has happened */
 
     } else {
         auto result = replay_session->replay_step(command);
+        /* using libunwind to take a look at the stack at the place
+           of the event */
+
         if (result.status == REPLAY_EXITED) {
           res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
           LOG(debug) << "REPLAY_EXITED\n";
