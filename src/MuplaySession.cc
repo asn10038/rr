@@ -101,9 +101,9 @@ namespace rr {
         if (unw_get_proc_name(&cursor, sym, sizeof(sym), &offset) == 0)
           printf("(%s+0x%lx)\n", sym, offset);
         else
-          printf("-- no symbol name found\n");
+          printf("\n");
       } while (unw_step(&cursor) > 0);
-
+      printf("-----------------\n");
 _UPT_destroy(context);
 
       /* The unwinding has happened */
