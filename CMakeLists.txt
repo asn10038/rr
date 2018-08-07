@@ -239,6 +239,17 @@ set_target_properties(libunwind-x86_64 PROPERTIES IMPORTED_LOCATION /usr/local/l
 
 # ==== libunwind ====
 
+# ANT edit to add libdwarf
+# NOTE: to install the ubuntu libdwarf simply: sudo apt install libdwarf-dev
+# This should install .a file in /usr/lib and .h file /usr/include
+# TODO: at some point this library should be included with the distribution rather
+# than depending on an external download.
+# ==== libdwarf ====
+add_library(libdwarf STATIC IMPORTED GLOBAL)
+set_target_properties(libdwarf PROPERTIES IMPORTED_LOCATION /usr/lib/libdwarf.a)
+
+#  ==== libdwarf ====
+
 find_path(SECCOMP NAMES "linux/seccomp.h")
 if(NOT SECCOMP)
   message(FATAL_ERROR "Couldn't find linux/seccomp.h. You may need to upgrade your kernel.")
@@ -303,6 +314,8 @@ include_directories("${PROJECT_SOURCE_DIR}/third-party/proc-service")
 include_directories("${PROJECT_SOURCE_DIR}/third-party/brotli/include")
 #ANT EDIT TO ADD LIBUNWIND
 include_directories("${PROJECT_SOURCE_DIR}/third-party/libunwind/include")
+# AND EDIT TO ADD LIBDWARF
+include_directories("/usr/include")
 # We need to know where our generated files are.
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
@@ -507,6 +520,8 @@ target_link_libraries(rr
   libunwind-ptrace
   libunwind-x86_64
   libunwind-setjmp
+  # ANT edit to add libdwarf
+  libdwarf
 )
 
 if(staticlibs)
