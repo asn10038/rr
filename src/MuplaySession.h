@@ -47,7 +47,9 @@ namespace rr {
      * Create a muplay session from the modified log
      * essentially a replay session with a swapped executable in the log
      */
-    static shr_ptr create(const std::string& trace_dir);
+    static shr_ptr create(const std::string& trace_dir,
+                          const std::string& old_exe,
+                          const std::string& mod_exe);
     /* TODO only accomodates RUN_CONTINUE */
     MuplayResult muplay_step(RunCommand command);
 
@@ -56,7 +58,9 @@ namespace rr {
     friend class DiversionSession;
 
     MuplaySession();
-    MuplaySession(const ReplaySession::shr_ptr& replaySession);
+    MuplaySession(const ReplaySession::shr_ptr& replaySession,
+                  const std::string& old_exe,
+                  const std::string& mod_exe);
 
     /* TODO Figure out what these args should be */
     MuplayResult muplay_step();
@@ -70,6 +74,10 @@ namespace rr {
 
     /* pid of the current task under observation */
     pid_t pid;
+
+    /* Paths to the original and the changed binaries */
+    const std::string old_exe;
+    const std::string mod_exe;
   };
 
 } // namespace rr

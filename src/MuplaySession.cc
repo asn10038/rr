@@ -8,16 +8,24 @@
 #include "ReplaySession.h"
 #include "ReplayTask.h"
 #include "libunwind-ptrace.h"
+
+// TODO fix this so it's not using the full path
+#include </usr/include/dwarf.h>
+#include </usr/include/libdwarf.h>
 using namespace std;
 
 namespace rr {
 
   // MuplaySession::MuplaySession() : emu_fs(EmuFs::create()) {}
 
-  MuplaySession::MuplaySession(const ReplaySession::shr_ptr& replaySession)
+  MuplaySession::MuplaySession(const ReplaySession::shr_ptr& replaySession,
+                               const string& old_exe,
+                               const string& mod_exe)
    : replay_session(replaySession),
      LIVE(false),
-     pid(-1)
+     pid(-1),
+     old_exe(old_exe),
+     mod_exe(mod_exe)
     // new_trace_reader(new TraceReader(new_trace_dir))
     {
       /* always redirect the stdio of the replay session */
@@ -37,10 +45,12 @@ namespace rr {
     // DEBUG_ASSERT(emu_fs->size() == 0);
   }
 
-  MuplaySession::shr_ptr MuplaySession::create(const string& trace_dir)
+  MuplaySession::shr_ptr MuplaySession::create(const string& trace_dir,
+                                               const string& old_exe,
+                                               const string& mod_exe)
   {
     ReplaySession::shr_ptr rs(ReplaySession::create(trace_dir));
-    shr_ptr session(new MuplaySession(rs));
+    shr_ptr session(new MuplaySession(rs, old_exe, mod_exe));
     return session;
   }
 
@@ -78,7 +88,21 @@ namespace rr {
         return res;
       }
 
+      /* Testing libdwarf stuff */
+      Dwarf_Signed cnt;
+      Dwarf_Line *linebuf;
+      int sres;
+      if((sres = dwarf_srclines(somedie, &linebug, &cnt, &error)) == DW_DLV_OK)
+      {
+        printf("count is %i", cnt);
 
+        for (i=0; i<cnt; i++)
+        {
+          dwarf_dealloc(dbg, linebuf[i], DW_DLA_LINE);
+        }
+        dwarf_dealloc(dbg, linebuf, DW_DLA_LIST);
+      }
+      /* End of libdwarf stuff */
       /* doing stack unwinding */
       unw_addr_space_t as = unw_create_addr_space(&_UPT_accessors, 0);
 

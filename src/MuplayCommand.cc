@@ -154,7 +154,9 @@ namespace rr {
     // if(new_trace_dir.size()){}
 
 
-    MuplaySession::shr_ptr muplay_session = MuplaySession::create(old_trace_dir);
+    MuplaySession::shr_ptr muplay_session = MuplaySession::create(old_trace_dir,
+                                                                  old_executable,
+                                                                  new_executable);
 
     printf("Doing muplay replay\n");
     while(true) {
