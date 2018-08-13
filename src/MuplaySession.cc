@@ -1,17 +1,15 @@
 /* Combination of diversion and replay session */
 #include <sys/ptrace.h>
 #include <sys/wait.h>
-
+#include <libunwind.h>
 #include "log.h"
 #include "MuplaySession.h"
 #include "DiversionSession.h"
 #include "ReplaySession.h"
 #include "ReplayTask.h"
-#include "libunwind-ptrace.h"
+#include "Unwinder.h"
 
-// TODO fix this so it's not using the full path
-#include </usr/include/dwarf.h>
-#include </usr/include/libdwarf.h>
+
 using namespace std;
 
 namespace rr {
@@ -78,7 +76,9 @@ namespace rr {
       // get the pid of the process under replay
       if (pid == -1)
       {
-        /* TODO figure out a way to track if the current process changes */
+        /* TODO figure out a way to track if the current process changes
+         * this code only checks the pid once
+         */
         pid = replay_session->current_task()->tid;
       }
       // check for exit
@@ -88,47 +88,18 @@ namespace rr {
         return res;
       }
 
-      /* Testing libdwarf stuff */
-      Dwarf_Signed cnt;
-      Dwarf_Line *linebuf;
-      int sres;
-      if((sres = dwarf_srclines(somedie, &linebug, &cnt, &error)) == DW_DLV_OK)
-      {
-        printf("count is %i", cnt);
+      /* Call libdwarf stuff */
 
-        for (i=0; i<cnt; i++)
-        {
-          dwarf_dealloc(dbg, linebuf[i], DW_DLA_LINE);
-        }
-        dwarf_dealloc(dbg, linebuf, DW_DLA_LIST);
-      }
       /* End of libdwarf stuff */
       /* doing stack unwinding */
-      unw_addr_space_t as = unw_create_addr_space(&_UPT_accessors, 0);
 
+      /* holds value of program counter stack trace */
+      std::vector<unw_word_t> pc_st = Unwinder::unwind_pc(pid);
 
-      void *context = _UPT_create(pid);
-      unw_cursor_t cursor;
-      if (unw_init_remote(&cursor, as, context) != 0)
+      for (auto pc_val : pc_st)
       {
-        LOG(debug) << "Couldn't initialize for remote unwinding -- process probably exited";
+        LOG(debug) << pc_val;
       }
-
-      do {
-        unw_word_t offset, pc;
-        char sym[4096];
-        if (unw_get_reg(&cursor, UNW_REG_IP, &pc))
-          LOG(debug) << "ERROR: cannot read program counter\n";
-
-        printf("0x%lx: ", pc);
-
-        if (unw_get_proc_name(&cursor, sym, sizeof(sym), &offset) == 0)
-          printf("(%s+0x%lx)\n", sym, offset);
-        else
-          printf("\n");
-      } while (unw_step(&cursor) > 0);
-      printf("-----------------\n");
-_UPT_destroy(context);
 
       /* The unwinding has happened */
 
