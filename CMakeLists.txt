@@ -237,18 +237,16 @@ set_target_properties(libunwind-setjmp PROPERTIES IMPORTED_LOCATION /usr/local/l
 add_library(libunwind-x86_64 STATIC IMPORTED GLOBAL)
 set_target_properties(libunwind-x86_64 PROPERTIES IMPORTED_LOCATION /usr/local/lib/libunwind-x86_64.a)
 
-# ==== libunwind ====
+# ====  end libunwind ====
 
 # ANT edit to add libdwarf
-# NOTE: to install the ubuntu libdwarf simply: sudo apt install libdwarf-dev
-# This should install .a file in /usr/lib and .h file /usr/include
-# TODO: at some point this library should be included with the distribution rather
-# than depending on an external download.
+# NOTE: must install libdwarf.a/h from source to /usr/local/lib and /usr/local/include
+
 # ==== libdwarf ====
 add_library(libdwarf STATIC IMPORTED GLOBAL)
-set_target_properties(libdwarf PROPERTIES IMPORTED_LOCATION /usr/lib/libdwarf.a)
+set_target_properties(libdwarf PROPERTIES IMPORTED_LOCATION /usr/local/lib/libdwarf.a)
 
-#  ==== libdwarf ====
+#  ==== end libdwarf ====
 
 find_path(SECCOMP NAMES "linux/seccomp.h")
 if(NOT SECCOMP)
