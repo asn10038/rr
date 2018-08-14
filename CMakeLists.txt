@@ -248,6 +248,11 @@ set_target_properties(libdwarf PROPERTIES IMPORTED_LOCATION /usr/local/lib/libdw
 
 #  ==== end libdwarf ====
 
+# ==== libelf ====
+# needs to be linked because libdwarf links to libelf.so by default
+
+# ==== end libelf
+
 find_path(SECCOMP NAMES "linux/seccomp.h")
 if(NOT SECCOMP)
   message(FATAL_ERROR "Couldn't find linux/seccomp.h. You may need to upgrade your kernel.")
@@ -523,6 +528,10 @@ target_link_libraries(rr
   libunwind-setjmp
   # ANT edit to add libdwarf
   libdwarf
+  # libelf and libz are dependencies for libdwarf
+  # by default these are linked dynamicall so rr needs to link to them as well
+  -lelf
+  -lz
 )
 
 if(staticlibs)
