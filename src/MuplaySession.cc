@@ -8,7 +8,7 @@
 #include "ReplaySession.h"
 #include "ReplayTask.h"
 #include "Unwinder.h"
-
+#include "DwarfReader.h"
 
 using namespace std;
 
@@ -96,10 +96,13 @@ namespace rr {
       /* holds value of program counter stack trace */
       std::vector<unw_word_t> pc_st = Unwinder::unwind_pc(pid);
 
+
       for (auto pc_val : pc_st)
       {
-        LOG(debug) << pc_val;
+        LOG(debug) << "0x" << pc_val;
+        std::string src_line = DwarfReader::get_src_line(old_exe.c_str(), pc_val);
       }
+      LOG(debug) << "_-------------";
 
       /* The unwinding has happened */
 

@@ -19,14 +19,32 @@ namespace rr {
       LOG(debug) << "couldn't initialiaze remote for unwinding";
     }
 
-    // unwind the program counter values on the stack
+// DEBUG prlint stacktrace with eh info
     do {
-      unw_word_t pc;
-      if(unw_get_reg(&cursor, UNW_REG_IP, &pc))
-      LOG(debug) << "Error can't read program counter";
-      res.push_back(pc);
+        unw_word_t offset, pc;
+        char sym[4096];
+        if (unw_get_reg(&cursor, UNW_REG_IP, &pc))
+          LOG(debug) << "ERROR: cannot read program counter\n";
+        printf("0x%lx: ", pc);
+        if (unw_get_proc_name(&cursor, sym, sizeof(sym), &offset) == 0)
+          printf("(%s+0x%lx)\n", sym, offset);
+        else
+          printf("\n");
 
-    } while (unw_step(&cursor) > 0);
+        res.push_back(pc);
+      } while (unw_step(&cursor) > 0);
+      printf("-----------------\n");
+_UPT_destroy(context);
+// end of DEBUG
+
+    // unwind the program counter values on the stack
+    // do {
+    //   unw_word_t pc;
+    //   if(unw_get_reg(&cursor, UNW_REG_IP, &pc))
+    //   LOG(debug) << "Error can't read program counter";
+    //   res.push_back(pc);
+    //
+    // } while (unw_step(&cursor) > 0);
 
     return res;
   }
