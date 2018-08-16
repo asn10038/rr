@@ -93,6 +93,9 @@ namespace rr {
 
       for (auto pc_val : pc_st)
       {
+        //TODO decide if I should use the pc_val or pc_val-1 to get
+        // memory address of instruction that triggered the event rather than just
+        // the return value
         std::string file_name = get_elf_file(pc_val);
         std::string src_line = DwarfReader::safe_get_src_line(file_name.c_str(), pc_val);
         LOG(debug) << "safe_src_line_return: " << file_name << " : " << src_line;
@@ -137,6 +140,7 @@ namespace rr {
     }
 
     /* Reading the current proc mapping from the AddressSpace */
+    /* Need to re init this on each call because mapping changes during replay */
     for (KernelMapIterator it(replay_session->current_task()); !it.at_end(); ++it)
     {
       KernelMapping km = it.current();

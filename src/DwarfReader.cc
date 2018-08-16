@@ -69,7 +69,7 @@ namespace rr {
     /* TODO add error handline */
     res = dwarf_init(fd, DW_DLC_READ, errhand, errarg, &dbg, errp);
     if(check_libdwarf_error(res))
-      return "no debug info found";
+      return "Error during dwarf_init...no debug_info";
 
     //TODO see how this needs to be built to run more than one source file
     // probably need to include some sort of for/while loop to get each cu
@@ -80,10 +80,12 @@ namespace rr {
                                &address_size,
                                &next_cu_header,
                                errp);
+
     if(check_libdwarf_error(res))
       return "No cu header to parse...no debug info";
 
     res = dwarf_siblingof(dbg, no_die, &cu_die, errp);
+
     if(check_libdwarf_error(res))
       FATAL() << "ERROR getting sibling of";
 
@@ -94,14 +96,12 @@ namespace rr {
 
     if ((res = dwarf_srclines(cu_die, &linebuf,&line_cnt, errp)) == DW_DLV_OK) {
       for (int i = 0; i < line_cnt; ++i) {
-        /* use linebuf[i] */
         /* Get the address of the line */
         res = dwarf_lineaddr(linebuf[i], &line_addr, errp);
         if(check_libdwarf_error(res))
-        {
           LOG(debug) << "ERROR getting lineaddr";
-        }
-        /* get the line number of the line */
+
+        /* get the line number */
         res = dwarf_lineno(linebuf[i], &line_no, errp);
         if(check_libdwarf_error(res))
         {
