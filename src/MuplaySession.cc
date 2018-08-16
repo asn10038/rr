@@ -89,11 +89,8 @@ namespace rr {
       }
 
       /* doing stack unwinding */
-
       /* holds value of program counter stack trace */
       std::vector<unw_word_t> pc_st = Unwinder::unwind_pc(pid);
-      /* using libunwind to take a look at the stack at the place
-         of the event */
 
       for (auto pc_val : pc_st)
       {

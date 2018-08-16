@@ -124,7 +124,7 @@ namespace rr {
     dwarf_finish(dbg, errp);
     /* closing the opened file */
     close(fd);
-    return "this";
+    return "src line not found";
   }
 
   bool DwarfReader::check_libdwarf_error(int return_status) {
