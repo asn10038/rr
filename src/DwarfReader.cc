@@ -140,13 +140,17 @@ namespace rr {
     return false;
   }
 
-  /* returns true if has debug info and false otherwise */
+  /* returns true if has debug info and false otherwise
+     has some special cases that are ignored as well */
   bool DwarfReader::check_for_dwarf_info(const char* elf_file_path) {
     Dwarf_Handler errhand = &check_dwarf_info_init_handler;
     Dwarf_Ptr errarg = 0;
     Dwarf_Error* errp = 0;
     std::string elf_string(elf_file_path);
 
+    /* SPECIAL CASE CHECKING */
+    // TODO make the special case paths a class variable
+    // and move the special case checking to a different function
     /* special case to ignore rr_page files that throw error on init_dbg */
     size_t found = elf_string.find("rr_page_");
     if (found != std::string::npos)
@@ -154,6 +158,8 @@ namespace rr {
     /* Make sure the file name isn't empty */
     if (elf_string.empty())
       return false;
+    /* end of special case checking */
+
     /* opening the file and initializing dwarf info */
     int fd = open(elf_file_path, O_RDONLY);
     Dwarf_Debug dbg;

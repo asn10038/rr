@@ -56,6 +56,11 @@ namespace rr {
 
     /* Find the file associated with a given virtual address in the tracee process */
     std::string get_elf_file(unw_word_t mem_address);
+
+    /* DEBUG this is just to test what happens if you clone a new process */
+    void scratch_clone();
+
+
   private:
     friend class ReplaySession;
     friend class DiversionSession;
@@ -78,6 +83,9 @@ namespace rr {
     /* Paths to the original and the changed binaries */
     const std::string old_exe;
     const std::string mod_exe;
+
+    /* DEBUG hardcoded diversion point will be removed when appropriate */
+    const std::string diversion_point;
   };
 
 } // namespace rr

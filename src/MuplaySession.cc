@@ -23,7 +23,8 @@ namespace rr {
      LIVE(false),
      pid(-1),
      old_exe(old_exe),
-     mod_exe(mod_exe)
+     mod_exe(mod_exe),
+     diversion_point("/home/ant/asn10038_rr/traces/hello_world-0/mmap_hardlink_3_hello_world : 6")
     // new_trace_reader(new TraceReader(new_trace_dir))
     {
       /* always redirect the stdio of the replay session */
@@ -99,6 +100,15 @@ namespace rr {
         std::string file_name = get_elf_file(pc_val);
         std::string src_line = DwarfReader::safe_get_src_line(file_name.c_str(), pc_val);
         LOG(debug) << "safe_src_line_return: " << file_name << " : " << src_line;
+        std::string location = file_name + " : " + src_line;
+        /* checking for diversion */
+        if(location == diversion_point)
+        {
+          LOG(debug) << "DIVERSION POINT DETECTED";
+          scratch_clone();
+          res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
+          return res;
+        }
       }
       LOG(debug) << "-------------";
 
@@ -119,12 +129,7 @@ namespace rr {
         //   }
         // }
         FATAL() << "Entered LIVE mode. Shouldn't be here yet";
-
-
     }
-
-
-
     return res;
   }
 
@@ -157,4 +162,38 @@ namespace rr {
 
   }
 
+  /* DEBUG this function is just for checking what might happen when you hit diversion point*/
+  void MuplaySession::scratch_clone(){
+    // virtual Task* clone(CloneReason reason, int flags, remote_ptr<void> stack,
+    //                     remote_ptr<void> tls, remote_ptr<int> cleartid_addr,
+    //                     pid_t new_tid, pid_t new_rec_tid, uint32_t new_serial,
+    //                     Session* other_session = nullptr);
+    //
+    // Task* cloned_task;
+    // cloned_task = clone(Task::CloneReason::)
+
+    DiversionSession::shr_ptr ds = replay_session->clone_diversion();
+    Task* t = replay_session->current_task();
+    int count = 0;
+    /* GOING TO USE PTRACE TO CHANGE THE VALUE OF THE STRING IN MEMORY */
+    long addr = 0x4005e0;
+    long addr2 = 0x4005e1;
+    long addr3 = 0x4005e2;
+    char b = ' ';
+    char c = '2';
+    char d = '!';
+    ptrace(PTRACE_POKEDATA, pid, addr, b);
+    ptrace(PTRACE_POKEDATA, pid, addr2, c);
+    ptrace(PTRACE_POKEDATA, pid, addr3, d);
+    /* -------- */
+    while(1) {
+        ds->diversion_step(t, RUN_CONTINUE, 0);
+        count++;
+        if (count > 10)
+          break;
+    }
+
+    // LOG(debug) << "In the diversion session the current task is: " << ds->current_task();
+    return;
+  }
 } // namespace rr
