@@ -6,6 +6,7 @@
 #include "EmuFs.h"
 #include "Session.h"
 #include "ReplaySession.h"
+#include "Unwinder.h"
 
 
 namespace rr {
@@ -53,6 +54,8 @@ namespace rr {
     /* TODO only accomodates RUN_CONTINUE */
     MuplayResult muplay_step(RunCommand command);
 
+    /* Find the file associated with a given virtual address in the tracee process */
+    std::string get_elf_file(unw_word_t mem_address);
   private:
     friend class ReplaySession;
     friend class DiversionSession;
@@ -61,9 +64,6 @@ namespace rr {
     MuplaySession(const ReplaySession::shr_ptr& replaySession,
                   const std::string& old_exe,
                   const std::string& mod_exe);
-
-    /* TODO Figure out what these args should be */
-    MuplayResult muplay_step();
 
     ReplaySession::shr_ptr replay_session;
     DiversionSession::shr_ptr diversion_session;

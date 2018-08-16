@@ -8,7 +8,11 @@ namespace rr {
   public:
     /* Resolves the src line associated with the given memory addres */
     static std::string get_src_line(const char* elf_file_path, unw_word_t mem_address);
+    static bool check_libdwarf_error(int return_status);
+    /* Determines if the file at elf_file_path has debugging information */
+    static bool check_for_dwarf_info(const char* elf_file_path);
   };
-    bool check_libdwarf_error(int return_status);
+
+
 } // namespace rr
 #endif

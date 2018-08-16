@@ -88,28 +88,30 @@ namespace rr {
         return res;
       }
 
-      /* Call libdwarf stuff */
-
-      /* End of libdwarf stuff */
       /* doing stack unwinding */
 
       /* holds value of program counter stack trace */
       std::vector<unw_word_t> pc_st = Unwinder::unwind_pc(pid);
-
+      /* using libunwind to take a look at the stack at the place
+         of the event */
 
       for (auto pc_val : pc_st)
       {
-        LOG(debug) << "0x" << pc_val;
-        std::string src_line = DwarfReader::get_src_line(old_exe.c_str(), pc_val);
+        std::string file_name = get_elf_file(pc_val);
+        if(DwarfReader::check_for_dwarf_info(file_name.c_str())) {
+          std::string src_line = DwarfReader::get_src_line(file_name.c_str(), pc_val);
+          LOG(debug) << "FOUND SOURCE LINE!!!  " << src_line;
+        }
+        else
+          LOG(debug) << "Couldnt get source info for " << file_name;
       }
-      LOG(debug) << "_-------------";
+      LOG(debug) << "-------------";
 
       /* The unwinding has happened */
 
     } else {
         auto result = replay_session->replay_step(command);
-        /* using libunwind to take a look at the stack at the place
-           of the event */
+
 
         if (result.status == REPLAY_EXITED) {
           res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
@@ -131,6 +133,27 @@ namespace rr {
 
 
     return res;
+  }
+
+  /* Finds the file that is mapped to this virtual address based on what's in
+     /proc/id/maps of the tracee process */
+  std::string MuplaySession::get_elf_file(unw_word_t mem_address)
+  {
+    if(mem_address) {}
+    /* Reading the current proc mapping from the AddressSpace */
+    for (KernelMapIterator it(replay_session->current_task()); !it.at_end(); ++it)
+    {
+      KernelMapping km = it.current();
+      if (km.contains(mem_address))
+      {
+        // LOG(debug) << "The mem address 0x" << std::hex << mem_address << " is in file: " << km.fsname();
+        return km.fsname();
+      }
+    }
+
+    FATAL() << "Couldn't find /proc entry for mem address: " << mem_address;
+    return "NOT FOUND";
+
   }
 
 } // namespace rr
