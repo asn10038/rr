@@ -24,6 +24,14 @@
 using namespace std;
 
 namespace rr {
+  std::string DwarfReader::safe_get_src_line(const char* elf_file_path,
+                                             unw_word_t mem_address)
+  {
+    if(!check_for_dwarf_info(elf_file_path))
+      return "No DWARF info available";
+    return get_src_line(elf_file_path, mem_address);
+  }
+
   std::string DwarfReader::get_src_line(const char* elf_file_path,
                                         unw_word_t mem_address)
   {
@@ -31,15 +39,12 @@ namespace rr {
     Dwarf_Debug dbg = 0;
     Dwarf_Die cu_die = 0;
     Dwarf_Die no_die = 0;
-    // Dwarf_Die sibling_die = 0;
-    // int fd = -1;
+
     int res = DW_DLV_ERROR;
-    // Dwarf_Error error;
+
     Dwarf_Handler errhand = 0;
     Dwarf_Ptr errarg = 0;
-    // Dwarf_Sig8 hash8;
     Dwarf_Error *errp = 0;
-    // int simpleerrhand = 0;
 
     // for next_cu_header
     Dwarf_Unsigned cu_header_length = 0;
@@ -60,10 +65,11 @@ namespace rr {
 
     /* opening the file and initializing dwarf info */
     int fd = open(elf_file_path, O_RDONLY);
+
     /* TODO add error handline */
     res = dwarf_init(fd, DW_DLC_READ, errhand, errarg, &dbg, errp);
     if(check_libdwarf_error(res))
-      return "no debug info not found";
+      return "no debug info found";
 
     //TODO see how this needs to be built to run more than one source file
     // probably need to include some sort of for/while loop to get each cu
@@ -108,11 +114,9 @@ namespace rr {
            you have found the line number */
         if(line_addr == mem_address)
         {
-          // std::string res(cu_name + ":" + line_no + " line_addr");
           std::string res_string = std::to_string(line_no);
           return res_string.c_str();
         }
-        /* Print the source and line number where the line is found */
 
         /* de allocate line_buf where no longer in use */
         dwarf_dealloc(dbg, linebuf[i], DW_DLA_LINE);
@@ -138,15 +142,35 @@ namespace rr {
 
   /* returns true if has debug info and false otherwise */
   bool DwarfReader::check_for_dwarf_info(const char* elf_file_path) {
+    Dwarf_Handler errhand = &check_dwarf_info_init_handler;
+    Dwarf_Ptr errarg = 0;
+    Dwarf_Error* errp = 0;
+    std::string elf_string(elf_file_path);
+
+    /* special case to ignore rr_page files that throw error on init_dbg */
+    size_t found = elf_string.find("rr_page_");
+    if (found != std::string::npos)
+      return false;
+    /* Make sure the file name isn't empty */
+    if (elf_string.empty())
+      return false;
     /* opening the file and initializing dwarf info */
     int fd = open(elf_file_path, O_RDONLY);
     Dwarf_Debug dbg;
     /* TODO add error handline */
-    int res = dwarf_init(fd, DW_DLC_READ, 0, 0, &dbg, 0);
+    LOG(debug) << "file_name: " << elf_file_path;
+    int res = dwarf_init(fd, DW_DLC_READ, errhand, errarg, &dbg, errp);
     close(fd);
     if(res == DW_DLV_NO_ENTRY || res == DW_DLV_ERROR){
       return false;
     }
     return true;
+  }
+
+  /* Does nothing if error thrown and above function checks for error code */
+  void DwarfReader::check_dwarf_info_init_handler(Dwarf_Error error, Dwarf_Ptr errarg)
+  {
+    if(error) {}
+    if(errarg){}
   }
 } // namespace rr

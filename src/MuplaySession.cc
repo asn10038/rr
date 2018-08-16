@@ -65,12 +65,11 @@ namespace rr {
   {
     MuplaySession::MuplayResult res;
     res.status = MuplaySession::MuplayStatus::MUPLAY_CONTINUE;
-    DiversionSession::shr_ptr ds;
-    Task* t = nullptr;
+    // DiversionSession::shr_ptr ds;
+    // Task* t = nullptr;
 
     if (!LIVE)
     {
-      // LOG(debug) << "going to replay frame num:" << replay_session->current_trace_frame().time() << "\n";
       auto result = replay_session->replay_step(command);
 
       // get the pid of the process under replay
@@ -95,34 +94,28 @@ namespace rr {
       for (auto pc_val : pc_st)
       {
         std::string file_name = get_elf_file(pc_val);
-        if(DwarfReader::check_for_dwarf_info(file_name.c_str())) {
-          std::string src_line = DwarfReader::get_src_line(file_name.c_str(), pc_val);
-          LOG(debug) << "FOUND SOURCE LINE!!!  " << src_line;
-        }
-        else
-          LOG(debug) << "Couldnt get source info for " << file_name;
+        std::string src_line = DwarfReader::safe_get_src_line(file_name.c_str(), pc_val);
+        LOG(debug) << "safe_src_line_return: " << file_name << " : " << src_line;
       }
       LOG(debug) << "-------------";
 
-      /* The unwinding has happened */
-
     } else {
-        auto result = replay_session->replay_step(command);
-
-
-        if (result.status == REPLAY_EXITED) {
-          res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
-          LOG(debug) << "REPLAY_EXITED\n";
-        }
-        else {
-
-          auto div_res = ds->diversion_step(t, RUN_SINGLESTEP, 0);
-          if (div_res.status == DiversionSession::DiversionStatus::DIVERSION_EXITED)
-          {
-            res.status = MUPLAY_EXITED;
-          }
-        }
-
+        // auto result = replay_session->replay_step(command);
+        //
+        //
+        // if (result.status == REPLAY_EXITED) {
+        //   res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
+        //   LOG(debug) << "REPLAY_EXITED\n";
+        // }
+        // else {
+        //
+        //   auto div_res = ds->diversion_step(t, RUN_SINGLESTEP, 0);
+        //   if (div_res.status == DiversionSession::DiversionStatus::DIVERSION_EXITED)
+        //   {
+        //     res.status = MUPLAY_EXITED;
+        //   }
+        // }
+        FATAL() << "Entered LIVE mode. Shouldn't be here yet";
 
 
     }
@@ -136,7 +129,13 @@ namespace rr {
      /proc/id/maps of the tracee process */
   std::string MuplaySession::get_elf_file(unw_word_t mem_address)
   {
-    if(mem_address) {}
+    /* Returning empty string on process exit */
+    if(replay_session->current_task() == NULL)
+    {
+      LOG(debug) << "Process exited...get_elf_file returns empty string";
+      return "";
+    }
+
     /* Reading the current proc mapping from the AddressSpace */
     for (KernelMapIterator it(replay_session->current_task()); !it.at_end(); ++it)
     {
@@ -148,8 +147,9 @@ namespace rr {
       }
     }
 
-    FATAL() << "Couldn't find /proc entry for mem address: " << mem_address;
-    return "NOT FOUND";
+    LOG(debug) << "Couldn't find /proc entry for mem address: " << std::hex << mem_address;
+    /* Returns empty string on not found because the Dwarf Reader checks this */
+    return "";
 
   }
 
