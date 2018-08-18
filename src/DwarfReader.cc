@@ -66,49 +66,8 @@ namespace rr {
   /* Returns 0 on success and -1 on error */
   /* cu_die needs to be freed after function */
   int DwarfReader::get_cu_die(const char* elf_file_path, Dwarf_Die cu_die) {
-    Dwarf_Debug dbg = 0;
-    Dwarf_Die no_die = 0;
-
-    int res = DW_DLV_ERROR;
-
-    Dwarf_Handler errhand = 0;
-    Dwarf_Ptr errarg = 0;
-    Dwarf_Error *errp = 0;
-
-    // for next_cu_header
-    Dwarf_Unsigned cu_header_length = 0;
-    Dwarf_Half version_stamp = 0;
-    Dwarf_Unsigned abbrev_offset = 0;
-    Dwarf_Half address_size = 0;
-    Dwarf_Unsigned next_cu_header = 0;
-
-
-    /* opening the file and initializing dwarf info */
-    int fd = open(elf_file_path, O_RDONLY);
-    if(fd < 0)
-      return DW_DLV_ERROR;
-
-    /* TODO add error handline */
-    res = dwarf_init(fd, DW_DLC_READ, errhand, errarg, &dbg, errp);
-    if(check_libdwarf_error(res))
-      return res;
-
-    //TODO see how this needs to be built to run more than one source file
-    // probably need to include some sort of for/while loop to get each cu
-
-    res = dwarf_next_cu_header(dbg, &cu_header_length,
-                               &version_stamp,
-                               &abbrev_offset,
-                               &address_size,
-                               &next_cu_header,
-                               errp);
-
-    if(check_libdwarf_error(res))
-      return res;
-
-    res = dwarf_siblingof(dbg, no_die, &cu_die, errp);
-    if(check_libdwarf_error(res))
-      return res;
+    if (elf_file_path) {}
+    if (cu_die) {}
 
 
     return 0;
