@@ -9,6 +9,7 @@
 #include "ReplayTask.h"
 #include "Unwinder.h"
 #include "DwarfReader.h"
+#include "MuplayLoader.h"
 
 using namespace std;
 
@@ -24,6 +25,7 @@ namespace rr {
      pid(-1),
      old_exe(old_exe),
      mod_exe(mod_exe),
+     /* TODO remove this hardcoded diversion point */
      diversion_point("/home/ant/asn10038_rr/traces/hello_world-0/mmap_hardlink_3_hello_world : 6")
     // new_trace_reader(new TraceReader(new_trace_dir))
     {
@@ -173,19 +175,29 @@ namespace rr {
     // cloned_task = clone(Task::CloneReason::)
 
     DiversionSession::shr_ptr ds = replay_session->clone_diversion();
+
     Task* t = replay_session->current_task();
     int count = 0;
     /* GOING TO USE PTRACE TO CHANGE THE VALUE OF THE STRING IN MEMORY */
-    long addr = 0x4005e0;
-    long addr2 = 0x4005e1;
-    long addr3 = 0x4005e2;
-    char b = ' ';
-    char c = '2';
-    char d = '!';
-    ptrace(PTRACE_POKEDATA, pid, addr, b);
-    ptrace(PTRACE_POKEDATA, pid, addr2, c);
-    ptrace(PTRACE_POKEDATA, pid, addr3, d);
-    /* -------- */
+    // long addr = 0x4005e0;
+    // long addr2 = 0x4005e1;
+    // long addr3 = 0x4005e2;
+    // char b = ' ';
+    // char c = '2';
+    // char d = '!';
+    // ptrace(PTRACE_POKEDATA, pid, addr, b);
+    // ptrace(PTRACE_POKEDATA, pid, addr2, c);
+    // ptrace(PTRACE_POKEDATA, pid, addr3, d);
+    /*  ---------- end of ptrace mods -------- */
+
+    /* Look for addresses that need to be loaded from modified executable */
+    DwarfReader::get_lineno_addrs(mod_exe.c_str(), 6);
+    /*------------------------------------------------------------------- */
+
+    /* calling the MuplayLoader to load the modified code into memory */
+    MuplayLoader mu_loader(mod_exe, t);
+    mu_loader.load();
+    /* --- loaded modified code --- */
     while(1) {
         ds->diversion_step(t, RUN_CONTINUE, 0);
         count++;

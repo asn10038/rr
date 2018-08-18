@@ -4,6 +4,8 @@
 #include </usr/local/include/dwarf.h>
 #include </usr/local/include/libdwarf.h>
 
+#include <vector>
+
 /* Windows specific header files */
 #if defined(_WIN32) && defined(HAVE_STDAFX_H)
 #include "stdafx.h"
@@ -21,9 +23,97 @@
 #include "log.h"
 
 
+
 using namespace std;
 
 namespace rr {
+
+  std::vector<long> DwarfReader::safe_get_lineno_addr(const char* elf_file_path,
+                                         int line_no)
+  {
+    std::vector<long> mem_addrs;
+    if (!check_for_dwarf_info(elf_file_path))
+      return mem_addrs;
+    return get_lineno_addrs(elf_file_path, line_no);
+  }
+
+  /* SAME AS get_src_line except for an if statement */
+  /* returns empty vector on error */
+  std::vector<long> DwarfReader::get_lineno_addrs(const char* elf_file_path,
+                                    int line_no)
+  {
+    int res;
+    Dwarf_Error *errp = 0;
+    char* cu_name;
+    std::vector<long> mem_addrs;
+    Dwarf_Die cu_die = 0;
+    res = get_cu_die(elf_file_path, cu_die);
+
+    if(check_libdwarf_error(res))
+      return mem_addrs;
+
+    res = dwarf_diename(cu_die, &cu_name, errp);
+    if(check_libdwarf_error(res))
+      FATAL()<< "ERROR getting cu_name";
+
+    LOG(debug) << "The cu name is: " << cu_name;
+
+    if(line_no > 0) {}
+    return mem_addrs;
+  }
+
+  /* Returns cu_die of the given elf file in cu_die */
+  /* Returns 0 on success and -1 on error */
+  /* cu_die needs to be freed after function */
+  int DwarfReader::get_cu_die(const char* elf_file_path, Dwarf_Die cu_die) {
+    Dwarf_Debug dbg = 0;
+    Dwarf_Die no_die = 0;
+
+    int res = DW_DLV_ERROR;
+
+    Dwarf_Handler errhand = 0;
+    Dwarf_Ptr errarg = 0;
+    Dwarf_Error *errp = 0;
+
+    // for next_cu_header
+    Dwarf_Unsigned cu_header_length = 0;
+    Dwarf_Half version_stamp = 0;
+    Dwarf_Unsigned abbrev_offset = 0;
+    Dwarf_Half address_size = 0;
+    Dwarf_Unsigned next_cu_header = 0;
+
+
+    /* opening the file and initializing dwarf info */
+    int fd = open(elf_file_path, O_RDONLY);
+    if(fd < 0)
+      return DW_DLV_ERROR;
+
+    /* TODO add error handline */
+    res = dwarf_init(fd, DW_DLC_READ, errhand, errarg, &dbg, errp);
+    if(check_libdwarf_error(res))
+      return res;
+
+    //TODO see how this needs to be built to run more than one source file
+    // probably need to include some sort of for/while loop to get each cu
+
+    res = dwarf_next_cu_header(dbg, &cu_header_length,
+                               &version_stamp,
+                               &abbrev_offset,
+                               &address_size,
+                               &next_cu_header,
+                               errp);
+
+    if(check_libdwarf_error(res))
+      return res;
+
+    res = dwarf_siblingof(dbg, no_die, &cu_die, errp);
+    if(check_libdwarf_error(res))
+      return res;
+
+
+    return 0;
+  }
+
   std::string DwarfReader::safe_get_src_line(const char* elf_file_path,
                                              unw_word_t mem_address)
   {
@@ -35,7 +125,6 @@ namespace rr {
   std::string DwarfReader::get_src_line(const char* elf_file_path,
                                         unw_word_t mem_address)
   {
-    /* For now doing based on what is in simple reader */
     Dwarf_Debug dbg = 0;
     Dwarf_Die cu_die = 0;
     Dwarf_Die no_die = 0;
