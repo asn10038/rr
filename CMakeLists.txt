@@ -465,11 +465,12 @@ set(RR_SOURCES
   ${CMAKE_CURRENT_BINARY_DIR}/rr_trace.capnp.c++
   third-party/blake2/blake2b.c
   # ANT EDIT to add source files
+  src/DwarfReader.cc
   src/MuplayCommand.cc
   src/MuplayEventMatcher.cc
+  src/MuplayLoader.cc
   src/MuplaySession.cc
   src/Unwinder.cc
-  src/DwarfReader.cc
 )
 
 set_source_files_properties(${RR_SOURCES}

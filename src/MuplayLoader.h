@@ -24,7 +24,8 @@ namespace rr {
      MuplayLoader(std::string mod_exe_path, Task* t);
 
      /* load the modified exe into the target task address space */
-     void load();
+     /* returns the load address in the target process */
+     long load();
 
    };
 

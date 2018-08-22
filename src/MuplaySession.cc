@@ -26,8 +26,7 @@ namespace rr {
      old_exe(old_exe),
      mod_exe(mod_exe),
      /* TODO remove this hardcoded diversion point */
-     diversion_point("/home/ant/asn10038_rr/traces/hello_world-0/mmap_hardlink_3_hello_world : 6")
-    // new_trace_reader(new TraceReader(new_trace_dir))
+     diversion_point("/home/ant/asn10038_rr/traces/grant_prop_1-0/mmap_hardlink_3_grant_prop_1 : 5")    // new_trace_reader(new TraceReader(new_trace_dir))
     {
       /* always redirect the stdio of the replay session */
       ReplaySession::Flags flags;
@@ -101,7 +100,7 @@ namespace rr {
         // the return value
         std::string file_name = get_elf_file(pc_val);
         std::string src_line = DwarfReader::safe_get_src_line(file_name.c_str(), pc_val);
-        LOG(debug) << "safe_src_line_return: " << file_name << " : " << src_line;
+        // LOG(debug) << "safe_src_line_return: " << file_name << " : " << src_line;
         std::string location = file_name + " : " + src_line;
         /* checking for diversion */
         if(location == diversion_point)
@@ -112,7 +111,7 @@ namespace rr {
           return res;
         }
       }
-      LOG(debug) << "-------------";
+      // LOG(debug) << "-------------";
 
     } else {
         // auto result = replay_session->replay_step(command);
@@ -166,6 +165,7 @@ namespace rr {
 
   /* DEBUG this function is just for checking what might happen when you hit diversion point*/
   void MuplaySession::scratch_clone(){
+    LOG(debug) << "entering scratch_clone";
     // virtual Task* clone(CloneReason reason, int flags, remote_ptr<void> stack,
     //                     remote_ptr<void> tls, remote_ptr<int> cleartid_addr,
     //                     pid_t new_tid, pid_t new_rec_tid, uint32_t new_serial,
@@ -191,21 +191,46 @@ namespace rr {
     /*  ---------- end of ptrace mods -------- */
 
     /* Look for addresses that need to be loaded from modified executable */
-    DwarfReader::get_lineno_addrs(mod_exe.c_str(), 6);
+
     /*------------------------------------------------------------------- */
 
     /* calling the MuplayLoader to load the modified code into memory */
     MuplayLoader mu_loader(mod_exe, t);
-    mu_loader.load();
     /* --- loaded modified code --- */
     while(1) {
+      // TODO 2 is a hardcoded value...there needs to be a mechanism that
+      // determines when to move the pc. Just looking at values on the stack
+      // moves the pc before the event has taken place...probably need a different
+      // way to monitor the pc during execution of the target process
+        if (count > 2)
+          break;
         ds->diversion_step(t, RUN_CONTINUE, 0);
         count++;
-        if (count > 10)
-          break;
     }
 
-    // LOG(debug) << "In the diversion session the current task is: " << ds->current_task();
+    LOG(debug) << "loading the new executable";
+    //TODO this probably can be done before running any code
+    long load_addr = mu_loader.load();
+    auto regs = t->regs();
+    regs.set_ip(load_addr+1332);
+    t->set_regs(regs);
+
+    //Attempting to replay after loading and moving ip
+    LOG(debug) << "Attempting to run newly loaded code";
+    while(true) {
+      auto div_res = ds->diversion_step(t, RUN_SINGLESTEP, 0);
+      if (div_res.status == DiversionSession::DiversionStatus::DIVERSION_EXITED)
+      {
+        LOG(debug) << "successfullly exited" ;
+        break;
+      }
+
+      count ++;
+    }
+    LOG(debug) << "count is; " << count;
+
+
+
     return;
   }
 } // namespace rr
