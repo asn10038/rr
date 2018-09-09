@@ -19,18 +19,48 @@ namespace rr {
     t(t)
   { }
 
+
+  std::vector<MemoryRange> MuplayLoader::find_empty_pages()
+  {
+    /* read the address space */
+    std::vector<MemoryRange> res;
+    KernelMapping prev;
+    bool started = false;
+    for (KernelMapIterator it(t); !it.at_end(); ++it)
+    {
+      KernelMapping km = it.current();
+      if(!started)
+      {
+        started = true;
+        prev = km;
+        continue;
+      }
+      int space = km.start().as_int() - prev.end().as_int();
+
+      if(space < 0) {
+        //TODO deal with why this is happening. Something with an
+        // int long problem
+      }
+      if(space > 0)
+      {
+        MemoryRange mem_range(prev.end().as_int(), space);
+        res.push_back(mem_range);
+      }
+      prev = km;
+    }
+    return res;
+  }
+
   /* TODO add arguments as appropriate */
   long MuplayLoader::load()
   {
+    std::vector<MemoryRange> open_pages = find_empty_pages();
     AutoRemoteSyscalls remote(t);
     SupportedArch arch = t->arch();
-    /* Mmapping the instructions from the new executable */
-    /* in this case I know they range from 0x400534-0x40053e in the new executable */
+
     MemoryRange code_result;
     remote_ptr<void> addr;
-    // size_t length;
-    // int prot;
-    // int flags;
+
     string path = mod_exe_path;
     AutoRestoreMem child_path(remote, path.c_str());
     int child_fd = remote.syscall(syscall_number_for_open(arch),
@@ -40,7 +70,7 @@ namespace rr {
 
     //TODO need to modify the mmap call to specific addresses
     code_result = MemoryRange(remote.infallible_mmap_syscall(remote_ptr<void>(),
-                                                             734, //TODO assuming one page
+                                                             4096, //TODO assuming one page
                                                              PROT_READ | PROT_EXEC,
                                                              MAP_PRIVATE,
                                                              child_fd,
@@ -56,18 +86,6 @@ namespace rr {
     /* --assuming this is done */
     /* in this case I know they range from 0x4005ef-0x400609*/
     /* --assuming this is done */
-
-    /* Moving the ip...this shouldn't be done here */
-    auto regs = t->regs();
-    LOG(debug) << "current ip: " << regs.ip();
-    long ip_val = ptrace(PTRACE_PEEKTEXT, t->tid, regs.ip());
-    LOG(debug) << "value at current ip: " << ip_val;
-    regs.set_ip(addr1);
-    t->set_regs(regs);
-    regs = t->regs();
-
-    long new_ip_val = ptrace(PTRACE_PEEKTEXT, t->tid, regs.ip());
-    LOG(debug) << "new ip { " << std::hex << regs.ip() << " : " << new_ip_val << " }";
 
 
     /* TODO figure out how to close file after reading in target process */

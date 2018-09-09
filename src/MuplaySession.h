@@ -7,6 +7,7 @@
 #include "Session.h"
 #include "ReplaySession.h"
 #include "Unwinder.h"
+#include "MuplayElfReader.h"
 
 
 namespace rr {
@@ -84,8 +85,8 @@ namespace rr {
     const std::string old_exe;
     const std::string mod_exe;
 
-    /* DEBUG hardcoded diversion point will be removed when appropriate */
-    const std::string diversion_point;
+    /* ElfReader to read the patched file */
+    MuplayElfReader muElfReader;
   };
 
 } // namespace rr

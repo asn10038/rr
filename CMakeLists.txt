@@ -471,6 +471,7 @@ set(RR_SOURCES
   src/MuplayLoader.cc
   src/MuplaySession.cc
   src/Unwinder.cc
+  src/MuplayElfReader.cc
 )
 
 set_source_files_properties(${RR_SOURCES}

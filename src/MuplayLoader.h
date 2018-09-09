@@ -27,6 +27,13 @@ namespace rr {
      /* returns the load address in the target process */
      long load();
 
+     /* Finds empty pages in the address space (reads /proc/maps)
+        to load the patched code needs to make sure that it loads
+        the page within 32 bits of the space where the original code
+        is loaded. For now assuming the lowest free pages will do the
+        trick */
+     std::vector<MemoryRange> find_empty_pages();
+
    };
 
 } //namespace rr

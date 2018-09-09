@@ -10,6 +10,7 @@
 #include "Unwinder.h"
 #include "DwarfReader.h"
 #include "MuplayLoader.h"
+#include "MuplayElfReader.h"
 
 using namespace std;
 
@@ -25,8 +26,7 @@ namespace rr {
      pid(-1),
      old_exe(old_exe),
      mod_exe(mod_exe),
-     /* TODO remove this hardcoded diversion point */
-     diversion_point("/home/ant/asn10038_rr/traces/grant_prop_1-0/mmap_hardlink_3_grant_prop_1 : 5")    // new_trace_reader(new TraceReader(new_trace_dir))
+     muElfReader(mod_exe)
     {
       /* always redirect the stdio of the replay session */
       ReplaySession::Flags flags;
@@ -51,6 +51,8 @@ namespace rr {
   {
     ReplaySession::shr_ptr rs(ReplaySession::create(trace_dir));
     shr_ptr session(new MuplaySession(rs, old_exe, mod_exe));
+    /* Read the elf file and extract the information */
+
     return session;
   }
 
@@ -102,34 +104,10 @@ namespace rr {
         std::string src_line = DwarfReader::safe_get_src_line(file_name.c_str(), pc_val);
         // LOG(debug) << "safe_src_line_return: " << file_name << " : " << src_line;
         std::string location = file_name + " : " + src_line;
-        /* checking for diversion */
-        if(location == diversion_point)
-        {
-          LOG(debug) << "DIVERSION POINT DETECTED";
-          scratch_clone();
-          res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
-          return res;
-        }
       }
       // LOG(debug) << "-------------";
 
     } else {
-        // auto result = replay_session->replay_step(command);
-        //
-        //
-        // if (result.status == REPLAY_EXITED) {
-        //   res.status = MuplaySession::MuplayStatus::MUPLAY_EXITED;
-        //   LOG(debug) << "REPLAY_EXITED\n";
-        // }
-        // else {
-        //
-        //   auto div_res = ds->diversion_step(t, RUN_SINGLESTEP, 0);
-        //   if (div_res.status == DiversionSession::DiversionStatus::DIVERSION_EXITED)
-        //   {
-        //     res.status = MUPLAY_EXITED;
-        //   }
-        // }
-        FATAL() << "Entered LIVE mode. Shouldn't be here yet";
     }
     return res;
   }
@@ -161,76 +139,5 @@ namespace rr {
     /* Returns empty string on not found because the Dwarf Reader checks this */
     return "";
 
-  }
-
-  /* DEBUG this function is just for checking what might happen when you hit diversion point*/
-  void MuplaySession::scratch_clone(){
-    LOG(debug) << "entering scratch_clone";
-    // virtual Task* clone(CloneReason reason, int flags, remote_ptr<void> stack,
-    //                     remote_ptr<void> tls, remote_ptr<int> cleartid_addr,
-    //                     pid_t new_tid, pid_t new_rec_tid, uint32_t new_serial,
-    //                     Session* other_session = nullptr);
-    //
-    // Task* cloned_task;
-    // cloned_task = clone(Task::CloneReason::)
-
-    DiversionSession::shr_ptr ds = replay_session->clone_diversion();
-
-    Task* t = replay_session->current_task();
-    int count = 0;
-    /* GOING TO USE PTRACE TO CHANGE THE VALUE OF THE STRING IN MEMORY */
-    // long addr = 0x4005e0;
-    // long addr2 = 0x4005e1;
-    // long addr3 = 0x4005e2;
-    // char b = ' ';
-    // char c = '2';
-    // char d = '!';
-    // ptrace(PTRACE_POKEDATA, pid, addr, b);
-    // ptrace(PTRACE_POKEDATA, pid, addr2, c);
-    // ptrace(PTRACE_POKEDATA, pid, addr3, d);
-    /*  ---------- end of ptrace mods -------- */
-
-    /* Look for addresses that need to be loaded from modified executable */
-
-    /*------------------------------------------------------------------- */
-
-    /* calling the MuplayLoader to load the modified code into memory */
-    MuplayLoader mu_loader(mod_exe, t);
-    /* --- loaded modified code --- */
-    while(1) {
-      // TODO 2 is a hardcoded value...there needs to be a mechanism that
-      // determines when to move the pc. Just looking at values on the stack
-      // moves the pc before the event has taken place...probably need a different
-      // way to monitor the pc during execution of the target process
-        if (count > 2)
-          break;
-        ds->diversion_step(t, RUN_CONTINUE, 0);
-        count++;
-    }
-
-    LOG(debug) << "loading the new executable";
-    //TODO this probably can be done before running any code
-    long load_addr = mu_loader.load();
-    auto regs = t->regs();
-    regs.set_ip(load_addr+1332);
-    t->set_regs(regs);
-
-    //Attempting to replay after loading and moving ip
-    LOG(debug) << "Attempting to run newly loaded code";
-    while(true) {
-      auto div_res = ds->diversion_step(t, RUN_SINGLESTEP, 0);
-      if (div_res.status == DiversionSession::DiversionStatus::DIVERSION_EXITED)
-      {
-        LOG(debug) << "successfullly exited" ;
-        break;
-      }
-
-      count ++;
-    }
-    LOG(debug) << "count is; " << count;
-
-
-
-    return;
   }
 } // namespace rr
