@@ -3,6 +3,7 @@
 #include <fcntl.h>     /* For open() */
 #include <stdlib.h>     /* For exit() */
 #include <unistd.h>     /* For close() */
+#include <elf.h>
 
 
 #include "log.h"
@@ -14,8 +15,9 @@
 using namespace std;
 
 namespace rr {
-  MuplayLoader::MuplayLoader(std::string mod_exe_path, Task* t)
-  : mod_exe_path(mod_exe_path),
+
+  MuplayLoader::MuplayLoader(MuplayElf mu_elf, Task* t)
+  : mu_elf(mu_elf),
     t(t)
   { }
 
@@ -48,6 +50,9 @@ namespace rr {
       }
       prev = km;
     }
+    // Put the end of the final km at the end of the list so that
+    // we know we can load at the end of the address space as well
+
     return res;
   }
 
@@ -61,7 +66,7 @@ namespace rr {
     MemoryRange code_result;
     remote_ptr<void> addr;
 
-    string path = mod_exe_path;
+    string path = mu_elf.path;
     AutoRestoreMem child_path(remote, path.c_str());
     int child_fd = remote.syscall(syscall_number_for_open(arch),
                      child_path.get(), O_RDONLY);
@@ -77,21 +82,89 @@ namespace rr {
                                                              0
                                                              //4096*1024 //TODO find how many pages the offset is
                                                            ), 4096);
-    LOG(debug) << "Mapped the new code into: " << std::hex << code_result.start() << " - " << code_result.end();
-    /* Checking the values at the address */
-    long addr1 = code_result.start().as_int()+1332;
-    long result = ptrace(PTRACE_PEEKDATA, t->tid, addr1);
-    LOG(debug) << "Mov instruction to jump to: " << std::hex << addr1 << " : " << result;
-    /* Mmapping the new data from the executable */
-    /* --assuming this is done */
-    /* in this case I know they range from 0x4005ef-0x400609*/
-    /* --assuming this is done */
 
-
-    /* TODO figure out how to close file after reading in target process */
-    // close(mod_fd);
+    remote.infallible_syscall(syscall_number_for_close(arch), child_fd);
     /* */
 
     return code_result.start().as_int();
+  }
+
+  /* Find the closest page range */
+  MemoryRange MuplayLoader::find_closest_page_range(Elf64_Phdr phdr)
+  {
+    MemoryRange res;
+
+    /* Assuming this is in order */
+    KernelMapping prev;
+    bool started = false;
+    Elf64_Addr p_vaddr = phdr.p_vaddr;
+    Elf64_Addr p_memsz = phdr.p_memsz;
+    for (KernelMapIterator it(t); !it.at_end(); ++it)
+    {
+      KernelMapping km = it.current();
+      if(!started)
+      {
+        started = true;
+        prev = km;
+        continue;
+      }
+      int space = km.start().as_int() - prev.end().as_int();
+
+      if(space < 0) {
+        //TODO deal with why this is happening. Something with an
+        // int long or signed vs unsigned problem
+      }
+
+      //space can accomodate program header and
+      // the space is after the original location of the load
+      //cast should be safe because of < 0 check above
+      if((unsigned int)space > p_memsz && prev.end() > p_vaddr)
+      {
+        MemoryRange mem_range(prev.end().as_int(), space);
+        return mem_range;
+      }
+      prev = km;
+    }
+
+    // If no slots large enough available load the code at
+    // the end of the address space
+    uint64_t memsz = phdr.p_memsz;
+    //DEBUG not sure if this cast is safe
+    MemoryRange mem_range(prev.end().as_int(),(size_t) memsz);
+    return mem_range;
+
+  }
+  
+  /* Loading the modified executable into the nearest page range
+     see note in .h file for more information */
+  void MuplayLoader::load_into_nearest_page_range(Elf64_Phdr phdr){
+    SupportedArch arch = t->arch();
+    AutoRemoteSyscalls remote(t);
+
+    // find the closest page range that works
+    MemoryRange open_space = find_closest_page_range(phdr);
+
+    //open the file in the tracee process
+    AutoRestoreMem child_path(remote, mu_elf.path.c_str());
+    int child_fd = remote.syscall(syscall_number_for_open(arch),
+                     child_path.get(), O_RDONLY);
+    if(child_fd < 0)
+      FATAL() << "Open failed with errno " << errno_name(-child_fd);
+
+    // load the segment into memory at closest page range
+
+    MemoryRange segment_mapping = MemoryRange(remote.infallible_mmap_syscall(open_space.start(),
+                                   phdr.p_memsz,
+                                   phdr.p_flags,
+                                   MAP_PRIVATE,
+                                   child_fd,
+                                   /* TODO figure out what offset_pages is */
+                                   0), phdr.p_memsz);
+
+    if(phdr.p_memsz != 0) {}
+
+    //close the file in the child process
+    remote.infallible_syscall(syscall_number_for_close(arch), child_fd);
+    if(segment_mapping.size() > 0) {}
   }
 }

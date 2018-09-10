@@ -39,12 +39,50 @@ namespace rr {
       // check if the segment is of type LOAD
       if(elf64_phdr.p_type == PT_LOAD)
       {
-        LOG(debug) << " You found some loadable segments";
+        res.push_back(elf64_phdr);
       }
     }
 
     // add the loadable segments to the list of loadable segments
     return res;
+  }
+
+  MuplayElf MuplayElfReader::read_muplay_elf()
+  {
+    MuplayElf res;
+    Elf64_Ehdr elf64_ehdr;
+    Elf64_Phdr elf64_phdr;
+    std::vector<Elf64_Phdr> loadable_segments;
+
+    std::ifstream ifs(elf_path,std::ifstream::in | std::ifstream::binary);
+    if(!ifs.good())
+    {
+      ifs.close();
+      FATAL() << "Couldn't open up the elf file at " << elf_path;
+    }
+    ifs.read((char*)&elf64_ehdr, sizeof(Elf64_Ehdr));
+    // go to the offset of the program header
+    ifs.seekg(elf64_ehdr.e_phoff);
+
+    //loop through program headers
+    for(int i=0; i<elf64_ehdr.e_phnum; i++)
+    {
+      ifs.read((char*)&elf64_phdr, sizeof(Elf64_Phdr));
+      // check if the segment is of type LOAD
+      if(elf64_phdr.p_type == PT_LOAD)
+      {
+        loadable_segments.push_back(elf64_phdr);
+      }
+    }
+
+    // Fill in the elf file
+    res.path = elf_path;
+    res.elf64_ehdr = elf64_ehdr;
+    res.elf64_loadable_segments = loadable_segments;
+
+
+    return res;
+
   }
 
 }

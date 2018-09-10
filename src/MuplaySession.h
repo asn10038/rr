@@ -8,7 +8,8 @@
 #include "ReplaySession.h"
 #include "Unwinder.h"
 #include "MuplayElfReader.h"
-
+#include "MuplayLoader.h"
+#include "MuplayElf.h"
 
 namespace rr {
 
@@ -84,9 +85,6 @@ namespace rr {
     /* Paths to the original and the changed binaries */
     const std::string old_exe;
     const std::string mod_exe;
-
-    /* ElfReader to read the patched file */
-    MuplayElfReader muElfReader;
   };
 
 } // namespace rr

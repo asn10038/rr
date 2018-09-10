@@ -11,6 +11,7 @@
 #include "DwarfReader.h"
 #include "MuplayLoader.h"
 #include "MuplayElfReader.h"
+#include "MuplayElf.h"
 
 using namespace std;
 
@@ -25,15 +26,14 @@ namespace rr {
      LIVE(false),
      pid(-1),
      old_exe(old_exe),
-     mod_exe(mod_exe),
-     muElfReader(mod_exe)
-    {
+     mod_exe(mod_exe)
+     {
       /* always redirect the stdio of the replay session */
       ReplaySession::Flags flags;
       flags.redirect_stdio = true;
       flags.muplay_enabled = true;
       replay_session->set_flags(flags);
-    }
+     }
 
   MuplaySession::~MuplaySession() {
     // We won't permanently leak any OS resources by not ensuring
@@ -51,7 +51,22 @@ namespace rr {
   {
     ReplaySession::shr_ptr rs(ReplaySession::create(trace_dir));
     shr_ptr session(new MuplaySession(rs, old_exe, mod_exe));
+
+    /* NOTE at some point may need to make the reader
+     * the elf file, and the loader part of the class rather
+     * than just tools used at startup
+     * depends on if we use them again once the diversion is
+     * running
+     */
+
     /* Read the elf file and extract the information */
+    MuplayElfReader reader(mod_exe);
+    MuplayElf mu_elf = reader.read_muplay_elf();
+    /* ----------------------- */
+    /* Map the patched executable into memory */
+    /* ----------------------- */
+
+
 
     return session;
   }

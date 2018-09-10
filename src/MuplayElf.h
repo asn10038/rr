@@ -1,5 +1,5 @@
-#ifndef RR_MUPLAY_ELF_READER_H_
-#define RR_MUPLAY_ELF_READER_H_
+#ifndef RR_MUPLAY_ELF_H_
+#define RR_MUPLAY_ELF_H_
 
 #include <elf.h>
 #include <string>
@@ -12,6 +12,9 @@ namespace rr {
      for the purposes of loading the code and doing the relocations
    */
   class MuplayElf {
+  public:
+
+    /* Attributes */
     /*
        For all of these assuming 64 bit operating system
        TODO make this tolerant of 32 bit executables as well
