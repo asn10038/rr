@@ -62,6 +62,15 @@ namespace rr {
     /* DEBUG this is just to test what happens if you clone a new process */
     void scratch_clone();
 
+    /* Returns if you've already loaded the modified executable or not */
+    bool has_done_modified_load() { return done_modified_load; };
+
+    /* loads the modified elf into the tracee address space */
+    /* also fills in the actual_load_addresses field of this class */
+    /* and modifies the done_modified_load field */
+    /* NOTE this may not be the best design decision */
+    void load_modified_elf();
+
 
   private:
     friend class ReplaySession;
@@ -85,6 +94,14 @@ namespace rr {
     /* Paths to the original and the changed binaries */
     const std::string old_exe;
     const std::string mod_exe;
+
+    /* Where the loadable segments were loaded */
+    /* TODO turn this into a map of Elf64_Phdr segments to memory return_addresses
+       need to come up with a hash function for Elf64_Phdr to do this */
+    std::vector<MemoryRange> actual_load_addresses;
+
+    /* Know if you have already loaded the modified executable */
+    bool done_modified_load;
   };
 
 } // namespace rr

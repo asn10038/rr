@@ -1,6 +1,7 @@
 #ifndef RR_MUPLAY_LOADER_H
 #define RR_MUPLAY_LOADER_H
 
+#include <unordered_map>
 #include <string>
 #include <elf.h>
 
@@ -26,16 +27,23 @@ namespace rr {
         and the target task */
      MuplayLoader(MuplayElf mu_elf, Task* t);
 
-     /* load the modified exe into the target task address space */
-     /* returns the load address in the target process */
-     long load();
-
      /* Finds empty pages in the address space (reads /proc/maps)
         to load the patched code needs to make sure that it loads
         the page within 32 bits of the space where the original code
         is loaded. For now assuming the lowest free pages will do the
         trick */
      std::vector<MemoryRange> find_empty_pages();
+
+     /*
+        Load all the loadable segments into the nearest page range
+        Returns a list of MemoryRange. In the same order as the
+        loadable segments vector in mu_elf.
+
+        This list holds where each loadable segment is stored
+        TODO: Turn this into a map instead of a vector
+        TODO: For some reason data section not loading with correct permissions
+        */
+     std::vector<MemoryRange> load_modified_elf();
 
      /*
         Given a program header struct load the segment into the nearest
@@ -45,10 +53,37 @@ namespace rr {
         TODO base addresses need to be stored somewhere. This probably needs
         to return this information back to the Muplay Session to manage this
        */
-     void load_into_nearest_page_range(Elf64_Phdr phdr);
+     MemoryRange load_into_nearest_page_range(Elf64_Phdr phdr);
 
      /* Finds the closest memory page range for a given program segment */
      MemoryRange find_closest_page_range(Elf64_Phdr phdr);
+
+     /* macros defined in the mmap library are not the same as the mapping_flags
+        from the program header */
+     /* returns -1 on invalid option */
+      int get_mmap_permissions(int p_flags){
+        switch(p_flags)
+        {
+          case 0:
+            return 0;
+          case 1:
+            return PROT_EXEC;
+          case 2:
+            return PROT_WRITE;
+          case 3:
+            return PROT_EXEC | PROT_WRITE;
+          case 4:
+            return PROT_READ;
+          case 5:
+            return PROT_READ | PROT_EXEC;
+          case 6:
+            return PROT_READ | PROT_WRITE;
+          case 7:
+            return PROT_READ | PROT_WRITE | PROT_EXEC;
+          default:
+            return -1;
+        }
+      }
 
    };
 

@@ -26,7 +26,8 @@ namespace rr {
      LIVE(false),
      pid(-1),
      old_exe(old_exe),
-     mod_exe(mod_exe)
+     mod_exe(mod_exe),
+     done_modified_load(false)
      {
       /* always redirect the stdio of the replay session */
       ReplaySession::Flags flags;
@@ -59,18 +60,25 @@ namespace rr {
      * running
      */
 
-    /* Read the elf file and extract the information */
-    MuplayElfReader reader(mod_exe);
-    MuplayElf mu_elf = reader.read_muplay_elf();
-    /* ----------------------- */
-    /* Map the patched executable into memory */
-    /* ----------------------- */
-
-
-
     return session;
   }
 
+
+  /* Load the modified elf into memory */
+  void MuplaySession::load_modified_elf()
+  {
+    /* Read the elf file and extract the information */
+
+      MuplayElfReader reader(mod_exe);
+      MuplayElf mu_elf = reader.read_muplay_elf();
+      /* ----------------------- */
+      /* Map the patched executable into memory */
+      MuplayLoader mu_loader(mu_elf, replay_session->current_task());
+      actual_load_addresses = mu_loader.load_modified_elf();
+      /* ----------------------- */
+      done_modified_load = true;
+
+  }
 
   /**
    * This function will use a replay session from the new trace directory,
@@ -84,9 +92,10 @@ namespace rr {
   {
     MuplaySession::MuplayResult res;
     res.status = MuplaySession::MuplayStatus::MUPLAY_CONTINUE;
-    // DiversionSession::shr_ptr ds;
-    // Task* t = nullptr;
-
+    if (replay_session->done_initial_exec() && !has_done_modified_load()){
+      //load modified code
+      load_modified_elf();
+    }
     if (!LIVE)
     {
       auto result = replay_session->replay_step(command);

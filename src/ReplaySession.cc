@@ -1565,24 +1565,6 @@ ReplayResult ReplaySession::replay_step(const StepConstraints& constraints) {
     result.status = REPLAY_EXITED;
     return result;
   }
-  /* ANT EDIT trying to trigger go live */
-  // if (current_trace_frame().time() > 14 && done_initial_exec())
-  // {
-  //
-  //   // Disable syscall buffering during diversions
-  //   if (t->preload_globals) {
-  //     t->write_mem(REMOTE_PTR_FIELD(t->preload_globals, in_diversion),
-  //                  (unsigned char)1);
-  //   }
-  //   t->set_syscallbuf_locked(1);
-  //
-  //   t->resume_execution(RESUME_SYSEMU, RESUME_WAIT, RESUME_UNLIMITED_TICKS,
-  //                       0);
-  //   process_syscall(t, t->regs().original_syscallno());
-  //
-  //   return result;
-  // }
-  /* */
 
   /* If we restored from a checkpoint, the steps might have been
    * computed already in which case step.action will not be TSTEP_NONE.

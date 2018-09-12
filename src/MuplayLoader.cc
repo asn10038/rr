@@ -5,7 +5,6 @@
 #include <unistd.h>     /* For close() */
 #include <elf.h>
 
-
 #include "log.h"
 #include "ElfReader.h"
 #include "MuplayLoader.h"
@@ -56,39 +55,6 @@ namespace rr {
     return res;
   }
 
-  /* TODO add arguments as appropriate */
-  long MuplayLoader::load()
-  {
-    std::vector<MemoryRange> open_pages = find_empty_pages();
-    AutoRemoteSyscalls remote(t);
-    SupportedArch arch = t->arch();
-
-    MemoryRange code_result;
-    remote_ptr<void> addr;
-
-    string path = mu_elf.path;
-    AutoRestoreMem child_path(remote, path.c_str());
-    int child_fd = remote.syscall(syscall_number_for_open(arch),
-                     child_path.get(), O_RDONLY);
-    if(child_fd < 0)
-      FATAL() << "Open failed with errno " << errno_name(-child_fd);
-
-    //TODO need to modify the mmap call to specific addresses
-    code_result = MemoryRange(remote.infallible_mmap_syscall(remote_ptr<void>(),
-                                                             4096, //TODO assuming one page
-                                                             PROT_READ | PROT_EXEC,
-                                                             MAP_PRIVATE,
-                                                             child_fd,
-                                                             0
-                                                             //4096*1024 //TODO find how many pages the offset is
-                                                           ), 4096);
-
-    remote.infallible_syscall(syscall_number_for_close(arch), child_fd);
-    /* */
-
-    return code_result.start().as_int();
-  }
-
   /* Find the closest page range */
   MemoryRange MuplayLoader::find_closest_page_range(Elf64_Phdr phdr)
   {
@@ -134,10 +100,21 @@ namespace rr {
     return mem_range;
 
   }
-  
-  /* Loading the modified executable into the nearest page range
+
+  std::vector<MemoryRange> MuplayLoader::load_modified_elf()
+  {
+      vector<MemoryRange> res;
+      for (Elf64_Phdr segment : mu_elf.elf64_loadable_segments)
+      {
+        MemoryRange mr(load_into_nearest_page_range(segment));
+
+        res.push_back(mr);
+      }
+      return res;
+  }
+  /* Loading the modified executable segment into the nearest page range
      see note in .h file for more information */
-  void MuplayLoader::load_into_nearest_page_range(Elf64_Phdr phdr){
+  MemoryRange MuplayLoader::load_into_nearest_page_range(Elf64_Phdr phdr){
     SupportedArch arch = t->arch();
     AutoRemoteSyscalls remote(t);
 
@@ -147,24 +124,22 @@ namespace rr {
     //open the file in the tracee process
     AutoRestoreMem child_path(remote, mu_elf.path.c_str());
     int child_fd = remote.syscall(syscall_number_for_open(arch),
-                     child_path.get(), O_RDONLY);
+                     child_path.get(), O_RDWR);
     if(child_fd < 0)
       FATAL() << "Open failed with errno " << errno_name(-child_fd);
 
     // load the segment into memory at closest page range
-
+    int mmap_flags = get_mmap_permissions(phdr.p_flags);
     MemoryRange segment_mapping = MemoryRange(remote.infallible_mmap_syscall(open_space.start(),
                                    phdr.p_memsz,
-                                   phdr.p_flags,
+                                   mmap_flags,
                                    MAP_PRIVATE,
                                    child_fd,
                                    /* TODO figure out what offset_pages is */
                                    0), phdr.p_memsz);
 
-    if(phdr.p_memsz != 0) {}
-
     //close the file in the child process
     remote.infallible_syscall(syscall_number_for_close(arch), child_fd);
-    if(segment_mapping.size() > 0) {}
+    return segment_mapping;
   }
 }
