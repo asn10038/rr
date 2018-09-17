@@ -71,6 +71,12 @@ namespace rr {
     /* NOTE this may not be the best design decision */
     void load_modified_elf();
 
+    /* Links the modified elf into the context of the original
+       elf after the modified elf has been loaded into the
+       address space
+        NOTE this may not be the best design decision */
+    void link_modified_elf();
+
 
   private:
     friend class ReplaySession;

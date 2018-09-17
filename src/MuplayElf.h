@@ -29,7 +29,9 @@ namespace rr {
      /* Program headers that are loadable */
      std::vector<Elf64_Phdr> elf64_loadable_segments;
 
-     /* This will need the relocation information */
+     /* Stores all the section information */
+     std::vector<Elf64_Shdr> elf64_sections;
+
 
      /* This will need the symbol information */
 

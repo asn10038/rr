@@ -59,7 +59,8 @@ namespace rr {
      MemoryRange find_closest_page_range(Elf64_Phdr phdr);
 
      /* macros defined in the mmap library are not the same as the mapping_flags
-        from the program header */
+        from the program header  function converts permissions flag from
+        program header to mmap equivalent value */
      /* returns -1 on invalid option */
       int get_mmap_permissions(int p_flags){
         switch(p_flags)

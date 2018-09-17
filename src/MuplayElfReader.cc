@@ -47,13 +47,31 @@ namespace rr {
     return res;
   }
 
+  std::vector<Elf64_Shdr> MuplayElfReader::read_section_headers(Elf64_Ehdr elf64_ehdr)
+  {
+      std::vector<Elf64_Shdr> res;
+      Elf64_Shdr elf64_shdr;
+      std::ifstream ifs(elf_path, std::ifstream::in | std::ifstream::binary);
+      //go to the section header offset
+      ifs.seekg(elf64_ehdr.e_shoff);
+      // read the sections
+      for(int i=0; i<elf64_ehdr.e_shnum; i++)
+      {
+        ifs.read((char*)&elf64_shdr, sizeof(Elf64_Shdr));
+        res.push_back(elf64_shdr);
+      }
+      return res;
+  }
+
   MuplayElf MuplayElfReader::read_muplay_elf()
   {
     MuplayElf res;
     Elf64_Ehdr elf64_ehdr;
     Elf64_Phdr elf64_phdr;
-    std::vector<Elf64_Phdr> loadable_segments;
+    Elf64_Shdr elf64_shdr;
 
+    std::vector<Elf64_Phdr> loadable_segments;
+    std::vector<Elf64_Shdr> sections;
     std::ifstream ifs(elf_path,std::ifstream::in | std::ifstream::binary);
     if(!ifs.good())
     {
@@ -75,10 +93,22 @@ namespace rr {
       }
     }
 
+    //read in the section headers
+    ifs.seekg(elf64_ehdr.e_shoff);
+    for(int i=0; i<elf64_ehdr.e_shnum; i++)
+    {
+      ifs.read((char*)&elf64_shdr, sizeof(Elf64_Shdr));
+      sections.push_back(elf64_shdr);
+    }
+
     // Fill in the elf file
     res.path = elf_path;
     res.elf64_ehdr = elf64_ehdr;
     res.elf64_loadable_segments = loadable_segments;
+    res.elf64_sections = sections;
+
+
+    ifs.close();
 
 
     return res;

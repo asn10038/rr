@@ -12,6 +12,7 @@
 #include "MuplayLoader.h"
 #include "MuplayElfReader.h"
 #include "MuplayElf.h"
+#include "MuplayLinker.h"
 
 using namespace std;
 
@@ -78,6 +79,20 @@ namespace rr {
       /* ----------------------- */
       done_modified_load = true;
 
+  }
+
+  /* Link the modified elf into memory */
+  void MuplaySession::link_modified_elf()
+  {
+    //read the elf files
+    MuplayElfReader old_reader(old_exe);
+    MuplayElfReader mu_reader(mod_exe);
+    MuplayElf old_elf = old_reader.read_muplay_elf();
+    MuplayElf mod_elf = mu_reader.read_muplay_elf();
+
+    //create the linker
+    std::shared_ptr<MuplaySession> session(this);
+    MuplayLinker muLinker(old_elf, mod_elf, session);
   }
 
   /**

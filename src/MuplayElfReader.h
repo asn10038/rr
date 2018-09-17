@@ -24,6 +24,9 @@ namespace rr {
     /* Fills the elf64_\ field -- elf header defined in /usr/include/elf.h */
     std::vector<Elf64_Phdr> read_loadable_segments(Elf64_Off phoff, Elf64_Half e_phnum);
 
+    /* Read in the section headers */
+    std::vector<Elf64_Shdr> read_section_headers(Elf64_Ehdr elf64_ehdr);
+
     /* Returns a fully populated MuplayElf object */
     MuplayElf read_muplay_elf();
 
