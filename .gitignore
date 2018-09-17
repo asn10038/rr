@@ -27,3 +27,4 @@ Testing/
 .*.swp
 *.o
 *libdwarf*
+*.gch
